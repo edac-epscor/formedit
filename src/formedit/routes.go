@@ -47,6 +47,14 @@ var routes = Routes{
                 "/save",
                 SaveEdit,
         },
+          	Route{
+                "ChangeStatus",
+                "post",
+                "/changestatus",
+                ChangeStatus,
+        },
+
+
 
 }
 
