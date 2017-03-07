@@ -225,12 +225,43 @@ const EditTemplate string = `<html>
       </div>
     </div>
   </div>
+    <div class="form-group customborder">
+      <h1><span class="label label-default">Quality Control</span></h1>
+	<br>
     <div class="form-group">
-      <div class="col-sm-offset-2 col-sm-10">
-        <button type="submit" class="btn btn-danger">Save</button>
+      <label class="control-label col-sm-2" for="Note">Note:</label>
+      <div class="col-sm-10">
+        <textarea rows="8" class="form-control" name="note" ></textarea>
       </div>
     </div>
-  </form>
+    <div class="container">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" value="reject" class="btn btn-danger">Reject</button>
+      </div>
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" value="accept" class="btn btn-success">Accept</button>
+      </div>
+   </div>
+
+<!--<div class="panel-footer row"><!-- panel-footer -->
+    <div class="col-xs-6 text-left">
+        <div class="previous">
+          <button type="submit" class="btn btn-danger">
+              <span class="glyphicon glyphicon-chevron-left"></span>Reject
+          </button>
+        </div>
+    </div>
+    <div class="col-xs-6 text-right">
+        <div class="next">
+          <button type="submit" class="btn btn-success">
+              Accept<span class="glyphicon glyphicon-chevron-right"></span>
+          </button>
+        </div>
+    </div>
+</div>-->
+
+ </div>
+</form>
 </div>
 </body>
 </html>`
