@@ -107,7 +107,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="datasetname" value="{{.DATASETNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=datasetnamebool value="1"> Dataset name is descriptive</label>
+      <label><input type="checkbox" name=datasetnamebool value="1"> Dataset name is descriptive of the data</label>
     </div>
     </div>
     <div class="form-group">
@@ -146,7 +146,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="phone" value="{{.PHONE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=phonebool value="1"> Phone number is valid</label>
+      <label><input type="checkbox" name=phonebool value="1"> Phone appears to be valid</label>
     </div>
 
     </div>
@@ -156,7 +156,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="firstnamepi" value="{{.FIRSTNAMEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=firstnamepibool value="1"> This is a known PI.</label>
+      <label><input type="checkbox" name=firstnamepibool value="1"> PI first name appears valid</label>
     </div>
 
     </div>

@@ -25,13 +25,9 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 
 				t := template.New("test")
 				t, err := t.Parse(StarterTemplate)
-				if err != nil {
-					log.Fatal(err)
-				}
+				LogErr(err)
 				err = t.Execute(w, params)
-				if err != nil {
-					panic(err)
-				}
+                                LogErr(err)
 			} else {
 				var statnumber string
 				switch status {
@@ -52,9 +48,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 					var count int
 					query := `select id from datasets where status = '` + statnumber + `';`
 					rows, err := formdb.Query(query)
-					if err != nil {
-						log.Fatal(err)
-					}
+                                        LogErr(err)
 					for rows.Next() {
 						var id string
 						err = rows.Scan(&id)
@@ -79,14 +73,9 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 					params := &secretdict{BODY: htmlstring, STYLE: style}
 					t := template.New("test")
 					t, err = t.Parse(StarterTemplate)
-					if err != nil {
-						log.Fatal(err)
-					}
+                                        LogErr(err)
 					err = t.Execute(w, params)
-					if err != nil {
-						panic(err)
-					}
-
+                                        LogErr(err)
 				}
 			}
 		} else {
@@ -127,27 +116,54 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		filedescription := r.FormValue("filedescription")
 		step := r.FormValue("step")
 
-                datasetnamebool := r.FormValue("datasetnamebool")
-                firstnamebool := r.FormValue("firstnamebool")
-                lastnamebool := r.FormValue("lastnamebool")
-                emailbool := r.FormValue("emailbool")
-                phonebool := r.FormValue("phonebool")
-                firstnamepibool := r.FormValue("firstnamepibool")
-                lastnamepibool := r.FormValue("lastnamepibool")
-                emailpibool := r.FormValue("emailpibool")
-                phonepibool := r.FormValue("phonepibool")
-                collectiontitlebool := r.FormValue("collectiontitlebool")
-                categorytitlebool := r.FormValue("categorytitlebool")
-                subcategorytitlebool := r.FormValue("subcategorytitlebool")
-                purposebool := r.FormValue("purposebool")
-                otherinfobool := r.FormValue("otherinfobool")
-                keywordsbool := r.FormValue("keywordsbool")
-                placenamesbool := r.FormValue("placenamesbool")
-                filenamebool := r.FormValue("filenamebool")
-                filetypebool := r.FormValue("filetypebool")
-                filedescriptionbool := r.FormValue("filedescriptionbool")
+		datasetnamebool := r.FormValue("datasetnamebool")
+		firstnamebool := r.FormValue("firstnamebool")
+		lastnamebool := r.FormValue("lastnamebool")
+		emailbool := r.FormValue("emailbool")
+		phonebool := r.FormValue("phonebool")
+		firstnamepibool := r.FormValue("firstnamepibool")
+		lastnamepibool := r.FormValue("lastnamepibool")
+		emailpibool := r.FormValue("emailpibool")
+		phonepibool := r.FormValue("phonepibool")
+		collectiontitlebool := r.FormValue("collectiontitlebool")
+		categorytitlebool := r.FormValue("categorytitlebool")
+		subcategorytitlebool := r.FormValue("subcategorytitlebool")
+		purposebool := r.FormValue("purposebool")
+		otherinfobool := r.FormValue("otherinfobool")
+		keywordsbool := r.FormValue("keywordsbool")
+		placenamesbool := r.FormValue("placenamesbool")
+		filenamebool := r.FormValue("filenamebool")
+		filetypebool := r.FormValue("filetypebool")
+		filedescriptionbool := r.FormValue("filedescriptionbool")
+		note := r.FormValue("note")
+		button := r.FormValue("button")
 
-		fmt.Fprintln(w, id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step+"#"+datasetnamebool+"-"+firstnamebool+"-"+lastnamebool+"-"+emailbool+"-"+phonebool+"-"+firstnamepibool+"-"+lastnamepibool+"-"+emailpibool+"-"+phonepibool+"-"+collectiontitlebool+"-"+categorytitlebool+"-"+subcategorytitlebool+"-"+purposebool+"-"+otherinfobool+"-"+keywordsbool+"-"+placenamesbool+"-"+filenamebool+"-"+filetypebool+"-"+filedescriptionbool)
+		_ =id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step+"#"+datasetnamebool+"-"+firstnamebool+"-"+lastnamebool+"-"+emailbool+"-"+phonebool+"-"+firstnamepibool+"-"+lastnamepibool+"-"+emailpibool+"-"+phonepibool+"-"+collectiontitlebool+"-"+categorytitlebool+"-"+subcategorytitlebool+"-"+purposebool+"-"+otherinfobool+"-"+keywordsbool+"-"+placenamesbool+"-"+filenamebool+"-"+filetypebool+"-"+filedescriptionbool+"-"+note+"-"+button
+		if button == "accept" {
+			stmt, err := formdb.Prepare("UPDATE datasets SET status = status + 1 WHERE id =?")
+			LogErr(err)
+			log.Println("SQL QUERY: UPDATE datasets SET status = status + 1 WHERE id =" + id + ";")
+			res, err := stmt.Exec(id)
+			log.Println(res)
+			LogErr(err)
+			affect, rowerr := res.RowsAffected()
+			log.Printf("ID = %d, affected = %d\n", id, affect)
+			LogErr(rowerr)
+
+			fmt.Fprintln(w, "Dataset ID "+id+" has been accepted!")
+		} else if button == "reject" {
+			stmt, err := formdb.Prepare("UPDATE datasets SET status = status + 1 WHERE id =?")
+			LogErr(err)
+			log.Println("SQL QUERY: UPDATE datasets SET status = status - 1 WHERE id =" + id + ";")
+			res, err := stmt.Exec(id)
+			log.Println(res)
+			LogErr(err)
+			affect, rowerr := res.RowsAffected()
+			log.Printf("ID = %d, affected = %d\n", id, affect)
+			LogErr(rowerr)
+			fmt.Fprintln(w, "Dataset ID "+id+" is rekt!")
+		}
+
 	}
 }
 
@@ -174,7 +190,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		LASTNAMEPI       string
 		EMAILPI          string
 		PHONEPI          string
-		ABSTRACT	 string
+		ABSTRACT         string
 		COLLECTIONTITLE  string
 		CATEGORYTITLE    string
 		SUBCATEGORYTITLE string
@@ -201,26 +217,19 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
                   WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
 
 		rows, err := formdb.Query(query)
-		if err != nil {
-			log.Fatal(err)
-		}
+                LogErr(rowerr)
 		for rows.Next() {
 			// var id string
-                        err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+			err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
 
 			params := &valuedict{ID: id, DATASETNAME: datasetname, COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, FIRSTNAME: firstname, LASTNAME: lastname, EMAIL: email, PHONE: phone, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, EMAILPI: emailpi, PHONEPI: phonepi, ABSTRACT: abstract, PURPOSE: purpose, OTHERINFO: otherinfo, KEYWORDS: keywords, PLACENAMES: placenames, FILENAME: filename, FILETYPE: filetype, FILEDESCRIPTION: filedescription, STEP: step}
 
-// 			params := &secretdict{BODY: htmlstring, STYLE: style}
-                                        t := template.New("edit")
-                                        t, err = t.Parse(EditTemplate)
-                                        if err != nil {
-                                                log.Fatal(err)
-                                        }
-                                        err = t.Execute(w, params)
-                                        if err != nil {
-                                                log.Fatal(err)
-                                        }
-
+			// 			params := &secretdict{BODY: htmlstring, STYLE: style}
+			t := template.New("edit")
+			t, err = t.Parse(EditTemplate)
+			LogErr(rowerr)
+			err = t.Execute(w, params)
+                        LogErr(rowerr)
 		}
 
 	}
@@ -242,9 +251,7 @@ func isAuthorized(token string) bool {
 	var username string
 	query := "SELECT name FROM users u INNER JOIN sessions s ON u.uid = s.uid WHERE s.sid = '" + token + "';"
 	rows, err := db.Query(query)
-	if err != nil {
-		log.Fatal(err)
-	}
+        LogErr(rowerr)
 	for rows.Next() {
 		err := rows.Scan(&username)
 		if err != nil {
@@ -258,4 +265,10 @@ func isAuthorized(token string) bool {
 		return false
 	}
 
+}
+
+func LogErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
