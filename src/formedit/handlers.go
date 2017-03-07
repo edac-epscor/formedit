@@ -126,7 +126,30 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		filetype := r.FormValue("filetype")
 		filedescription := r.FormValue("filedescription")
 		step := r.FormValue("step")
-		fmt.Fprintln(w, id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step)
+
+                idbool := r.FormValue("idbool")
+                datasetnamebool := r.FormValue("datasetnamebool")
+/*                firstnamebool := r.FormValue("firstnamebool")
+                lastnamebool := r.FormValue("lastnamebool")
+                emailbool := r.FormValue("emailbool")
+                phonebool := r.FormValue("phonebool")
+                firstnamepibool := r.FormValue("firstnamepibool")
+                lastnamepibool := r.FormValue("lastnamepibool")
+                emailpibool := r.FormValue("emailpibool")
+                phonepibool := r.FormValue("phonepibool")
+                collectiontitlebool := r.FormValue("collectiontitlebool")
+                categorytitlebool := r.FormValue("categorytitlebool")
+                subcategorytitlebool := r.FormValue("subcategorytitlebool")
+                purposebool := r.FormValue("purposebool")
+                otherinfobool := r.FormValue("otherinfobool")
+                keywordsbool := r.FormValue("keywordsbool")
+                placenamesbool := r.FormValue("placenamesbool")
+                filenamebool := r.FormValue("filenamebool")
+                filetypebool := r.FormValue("filetypebool")
+                filedescriptionbool := r.FormValue("filedescriptionbool")
+                stepbool := r.FormValue("stepbool")*/
+
+		fmt.Fprintln(w, id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step+" - "+datasetnamebool+" - "+idbool)
 	}
 }
 
