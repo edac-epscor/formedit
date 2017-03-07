@@ -127,9 +127,8 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		filedescription := r.FormValue("filedescription")
 		step := r.FormValue("step")
 
-                idbool := r.FormValue("idbool")
                 datasetnamebool := r.FormValue("datasetnamebool")
-/*                firstnamebool := r.FormValue("firstnamebool")
+                firstnamebool := r.FormValue("firstnamebool")
                 lastnamebool := r.FormValue("lastnamebool")
                 emailbool := r.FormValue("emailbool")
                 phonebool := r.FormValue("phonebool")
@@ -147,9 +146,8 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
                 filenamebool := r.FormValue("filenamebool")
                 filetypebool := r.FormValue("filetypebool")
                 filedescriptionbool := r.FormValue("filedescriptionbool")
-                stepbool := r.FormValue("stepbool")*/
 
-		fmt.Fprintln(w, id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step+" - "+datasetnamebool+" - "+idbool)
+		fmt.Fprintln(w, id+" "+datasetname+" "+firstname+" "+lastname+" "+email+" "+phone+" "+firstnamepi+" "+lastnamepi+" "+emailpi+" "+phonepi+" "+collectiontitle+" "+categorytitle+" "+subcategorytitle+" "+purpose+" "+otherinfo+" "+keywords+" "+placenames+" "+filename+" "+filetype+" "+filedescription+" "+step+"#"+datasetnamebool+"-"+firstnamebool+"-"+lastnamebool+"-"+emailbool+"-"+phonebool+"-"+firstnamepibool+"-"+lastnamepibool+"-"+emailpibool+"-"+phonepibool+"-"+collectiontitlebool+"-"+categorytitlebool+"-"+subcategorytitlebool+"-"+purposebool+"-"+otherinfobool+"-"+keywordsbool+"-"+placenamesbool+"-"+filenamebool+"-"+filetypebool+"-"+filedescriptionbool)
 	}
 }
 

@@ -25,7 +25,7 @@ const StarterTemplate string =`<html>
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-              <li><a href="/formedit/?status=one">In Progress</a></li>
+              <li><a href="/formedit/?status=two">In Progress</a></li>
               <li><a href="/formedit/?status=two">Submitted for Approval</a></li>
               <li><a href="/formedit/?status=three">Approved</a></li>
               <li><a href="/formedit/?status=ready">Certified</a></li>
@@ -100,8 +100,6 @@ const EditTemplate string = `<html>
       <div class="col-sm-6">
         <input type="hidden" class="form-control" name="id" value="{{.ID}}" readonly>
       </div>
-
-
     </div>
     <div class="form-group">
       <label class="control-label col-sm-2" for="datasetname">Dataset Name :</label>
@@ -111,7 +109,6 @@ const EditTemplate string = `<html>
     <div class="col-sm-4">
       <label><input type="checkbox" name=datasetnamebool value="1"> Dataset name is descriptive</label>
     </div>
-
     </div>
     <div class="form-group">
       <label class="control-label col-sm-2" for="firstname">First Name:</label>
@@ -231,7 +228,7 @@ const EditTemplate string = `<html>
       </div>
 
     <div class="col-sm-4">
-      <label><input type="checkbox" name=subcatetorytitlebool value="1"> Subcategory is valid.</label>
+      <label><input type="checkbox" name="subcategorytitlebool" value="1"> Subcategory is valid.</label>
     </div>
     </div>
 
@@ -323,14 +320,14 @@ const EditTemplate string = `<html>
 <div class="panel-footer row"><!-- panel-footer -->
     <div class="col-xs-6 text-left">
         <div class="previous">
-          <button type="submit" class="btn btn-danger">
+          <button type="submit" name="button" value="reject" class="btn btn-danger">
               <span class="glyphicon glyphicon-chevron-left"></span>Reject
           </button>
         </div>
     </div>
     <div class="col-xs-6 text-right">
         <div class="next">
-          <button type="submit" class="btn btn-success">
+          <button type="submit" name="button" value="accept" class="btn btn-success">
               Accept<span class="glyphicon glyphicon-chevron-right"></span>
           </button>
         </div>
