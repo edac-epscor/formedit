@@ -197,7 +197,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
                                         }
                                         err = t.Execute(w, params)
                                         if err != nil {
-                                                panic(err)
+                                                log.Fatal(err)
                                         }
 
 		}
