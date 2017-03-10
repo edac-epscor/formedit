@@ -93,12 +93,69 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Sorry " + username + " you are not on the list of cool kids."))
+                        style:=`.footer-images {
+                        margin: auto;
+                        display: block;
+                        position: absolute;
+                        bottom: 0;
+                        text-align: center;
+                        }
+                        .footer-images .copyright {
+                        text-align: center;
+                        }`
+
+                        body:=`<div class="container">
+                             <div class="jumbotron">
+                             <h1>Not Authorized</h1>
+                             <p>`+username+` is not autorized for this app.</p>
+                             <div class="footer-images">
+                             <img alt="Bouncer" src="`+Bouncer+`"/>
+                            </div>
+                            </div>
+                            </div>`
+                        params := &secretdict{BODY: body, STYLE: style}
+                        t := template.New("error")
+                        t, err := t.Parse(Bootstrap)
+                        LogErr(err)
+                        err = t.Execute(w, params)
+                        LogErr(err)
+
+
+
+//			w.Write([]byte("Sorry " + username + " you are not on the list of cool kids."))
 		}
 
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("You need to be logged in to use this API :("))
+                        style:=`.footer-images {
+                        margin: auto;
+                        display: block;
+                        position: absolute;
+                        bottom: 0;
+ 			text-align: center;
+                        }
+                        .footer-images .copyright {
+                        text-align: center;
+                        }`
+
+                        body:=`<div class="container">
+                             <div class="jumbotron">
+                             <h1>Not Authorized</h1>
+                             <p>You must be logged into the reporting site to use this tool</p>
+                             <div class="footer-images">
+                             <img alt="Bouncer" src="`+Bouncer+`"/>
+                            </div>
+                            </div>
+                            </div>`
+                        params := &secretdict{BODY: body, STYLE: style}
+                        t := template.New("error")
+                        t, err := t.Parse(Bootstrap)
+                        LogErr(err)
+                        err = t.Execute(w, params)
+                        LogErr(err)
+
+
+//		w.Write([]byte("You need to be logged in to use this API :("))
 	}
 
 }
@@ -323,14 +380,21 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
                   datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step
                   FROM datasets, collections, categorys, subcategorys
                   WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
-
 		rows, err = formdb.Query(query)
 		LogErr(err)
 		for rows.Next() {
 			// var id string
+
 			err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
 			LogErr(err)
+fmt.Println("lolfart")
 			params = &valuedict{ID: id, DATASETNAME: datasetname, COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, FIRSTNAME: firstname, LASTNAME: lastname, EMAIL: email, PHONE: phone, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, EMAILPI: emailpi, PHONEPI: phonepi, ABSTRACT: abstract, PURPOSE: purpose, OTHERINFO: otherinfo, KEYWORDS: keywords, PLACENAMES: placenames, FILENAME: filename, FILETYPE: filetype, FILEDESCRIPTION: filedescription, STEP: step, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes}
+
+                      //  fmt.Println("ID: "+id+", DATASETNAME: "+datasetname+", COLLECTIONTITLE: "+collectiontitle+", CATEGORYTITLE: "+categorytitle+", SUBCATEGORYTITLE: "+subcategorytitle+", FIRSTNAME: "+firstname+", LASTNAME: "+lastname+", EMAIL: "+email+", PHONE: "+phone+", FIRSTNAMEPI: "+firstnamepi+", LASTNAMEPI: "+lastnamepi+", EMAILPI: "+emailpi+", PHONEPI: "+phonepi+", ABSTRACT: "+abstract+", PURPOSE: "+purpose+", OTHERINFO: "+otherinfo+", KEYWORDS: "+keywords+", PLACENAMES: "+placenames+", FILENAME: "+filename+", FILETYPE: "+filetype+", FILEDESCRIPTION: "+filedescription+", STEP: "+step+", STATUS1: "+authmap["status1"]+", DISABLED1: "+authmap["disabled1"]+", STATUS2: "+authmap["status2"]+", DISABLED2: "+authmap["disabled2"]+", STATUS3: "+authmap["status3"]+", DISABLED3: "+authmap["disabled3"]+", STATUS4: "+authmap["status4"]+", DISABLED4: "+authmap["disabled4"]+", STATUS5: "+authmap["status5"]+", DISABLED5: "+authmap["disabled5"]+", NOTES: "+notes)
+
+
+
+
 			//t := template.New("edit")
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
@@ -366,11 +430,11 @@ func isAuthorized(token string) (int, string) {
 		}
 	}
 
-	if username == "hbarrett" {
+	if username == "ahbarrett" {
 		return 3, username
-	} else if username == "hbarrett" || username == "jsavickas" {
+	} else if username == "ahbarrett" || username == "jsavickas" {
 		return 2, username
-	} else if username == "gvalentin" || username == "hbarrett" || username == "sdiller" || username == "jsavickas" {
+	} else if username == "gvalentin" || username == "ahbarrett" || username == "sdiller" || username == "jsavickas" {
 		return 1, username
 	} else {
 		return 0, username
