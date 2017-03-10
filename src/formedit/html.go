@@ -25,17 +25,29 @@ const StarterTemplate string =`<html>
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-              <li><a href="/formedit/?status=two">In Progress</a></li>
-              <li><a href="/formedit/?status=two">Submitted for Approval</a></li>
-              <li><a href="/formedit/?status=three">Approved</a></li>
-              <li><a href="/formedit/?status=ready">Certified</a></li>
-              <li><a href="/formedit/?status=done">Inserted into GSToRE</a></li>
+              <li{{.DISABLED1}}><a{{.STATUS1}}>In Progress</a></li>
+              <li{{.DISABLED2}}><a{{.STATUS2}}>Submitted for Approval</a></li>
+              <li{{.DISABLED3}}><a{{.STATUS3}}>Approved</a></li>
+              <li{{.DISABLED4}}><a{{.STATUS4}}>Certified</a></li>
+              <li{{.DISABLED5}}><a{{.STATUS5}}>Inserted into GSToRE</a></li>
             </ul>
           </div>
         </div>
       </nav>
 </div>
 {{.BODY}}
+</body>
+</html>`
+
+const RedirectTemplate string =`
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="refresh" content="0;URL={{.RURL}}" />
+<title>Redirect</title>
+</head>
+<body>
 </body>
 </html>`
 
@@ -63,9 +75,6 @@ const EditTemplate string = `<html>
 </head>
 <body>
 
-
-
-
 <nav class="navbar navbar-default">
         <div class="container">
           <div class="navbar-header">
@@ -79,13 +88,13 @@ const EditTemplate string = `<html>
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-              <li><a href="/formedit/?status=one">In Progress</a></li>
-              <li><a href="/formedit/?status=two">Submitted for Approval</a></li>
-              <li><a href="/formedit/?status=three">Approved</a></li>
-              <li><a href="/formedit/?status=ready">Certified</a></li>
-              <li><a href="/formedit/?status=done">Inserted into GSToRE</a></li>
+              <li{{.DISABLED1}}><a{{.STATUS1}}>In Progress</a></li>
+              <li{{.DISABLED2}}><a{{.STATUS2}}>Submitted for Approval</a></li>
+              <li{{.DISABLED3}}><a{{.STATUS3}}>Approved</a></li>
+              <li{{.DISABLED4}}><a{{.STATUS4}}>Certified</a></li>
+              <li{{.DISABLED5}}><a{{.STATUS5}}>Inserted into GSToRE</a></li>
             </ul>
-          </div><!--/.nav-collapse -->
+          </div>
         </div>
       </nav>
 
@@ -107,7 +116,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="datasetname" value="{{.DATASETNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=datasetnamebool value="1"> Dataset name is descriptive of the data</label>
+      <label><input type="checkbox" name=datasetnamebool value=true> Dataset name is descriptive of the data</label>
     </div>
     </div>
     <div class="form-group">
@@ -116,7 +125,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="firstname" value="{{.FIRSTNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=firstnamebool value="1"> First Name name is valid</label>
+      <label><input type="checkbox" name=firstnamebool value=true> First Name name is valid</label>
     </div>
 
     </div>
@@ -126,7 +135,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="lastname" value="{{.LASTNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=lastnamebool value="1"> Last name is valid</label>
+      <label><input type="checkbox" name=lastnamebool value=true> Last name is valid</label>
     </div>
 
     </div>
@@ -136,7 +145,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="email" value="{{.EMAIL}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=emailbool value="1"> E-Mail appears to be valid</label>
+      <label><input type="checkbox" name=emailbool value=true> E-Mail appears to be valid</label>
     </div>
 
     </div>
@@ -146,7 +155,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="phone" value="{{.PHONE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=phonebool value="1"> Phone appears to be valid</label>
+      <label><input type="checkbox" name=phonebool value=true> Phone appears to be valid</label>
     </div>
 
     </div>
@@ -156,7 +165,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="firstnamepi" value="{{.FIRSTNAMEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=firstnamepibool value="1"> PI first name appears valid</label>
+      <label><input type="checkbox" name=firstnamepibool value=true> PI first name appears valid</label>
     </div>
 
     </div>
@@ -166,7 +175,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="lastnamepi" value="{{.LASTNAMEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=lastnamepibool value="1"> This is a known PI</label>
+      <label><input type="checkbox" name=lastnamepibool value=true> This is a known PI</label>
     </div>
 
     </div>
@@ -176,7 +185,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="emailpi" value="{{.EMAILPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=emailpibool value="1">E-Mail is a know address of a PI</label>
+      <label><input type="checkbox" name=emailpibool value=true>E-Mail is a know address of a PI</label>
     </div>
 
 
@@ -187,7 +196,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="phonepi" value="{{.PHONEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=phonepibool value="1"> Phone number is valid.</label>
+      <label><input type="checkbox" name=phonepibool value=true> Phone number is valid.</label>
     </div>
 
     </div>
@@ -197,7 +206,7 @@ const EditTemplate string = `<html>
         <textarea readonly rows="8" class="form-control" name="abstract" >{{.ABSTRACT}}</textarea>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=abstractbool value="1"> Abstract is valid and informitave.</label>
+      <label><input type="checkbox" name=abstractbool value=true> Abstract is valid and informitave.</label>
     </div>
 
     </div>
@@ -207,7 +216,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="collectiontitle" value="{{.COLLECTIONTITLE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=collectiontitlebool value="1"> Collection Title number is valid.</label>
+      <label><input type="checkbox" name=collectiontitlebool value=true> Collection Title is valid.</label>
     </div>
 
     </div>
@@ -217,7 +226,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="categorytitle" value="{{.CATEGORYTITLE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=categorytitlebool value="1"> Category Title is valid</label>
+      <label><input type="checkbox" name=categorytitlebool value=true> Category Title is valid</label>
     </div>
 
     </div>
@@ -228,7 +237,7 @@ const EditTemplate string = `<html>
       </div>
 
     <div class="col-sm-4">
-      <label><input type="checkbox" name="subcategorytitlebool" value="1"> Subcategory is valid.</label>
+      <label><input type="checkbox" name="subcategorytitlebool" value=true> Subcategory is valid.</label>
     </div>
     </div>
 
@@ -238,7 +247,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="purpose" value="{{.PURPOSE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=purposebool value="1"> Purpose is descriptive.</label>
+      <label><input type="checkbox" name=purposebool value=true> Purpose is descriptive.</label>
     </div>
 
     </div>
@@ -248,7 +257,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="otherinfo" value="{{.OTHERINFO}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=otherinfobool value="1"> Other Info is descriptive (can be N/A)</label>
+      <label><input type="checkbox" name=otherinfobool value=true> Other Info is descriptive (can be N/A)</label>
     </div>
 
     </div>
@@ -259,7 +268,7 @@ const EditTemplate string = `<html>
       </div>
 
     <div class="col-sm-4">
-      <label><input type="checkbox" name=keywordsbool value="1"> Keywords are meaningful.</label>
+      <label><input type="checkbox" name=keywordsbool value=true> Keywords are meaningful.</label>
     </div>
 
     </div>
@@ -269,7 +278,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="placenames" value="{{.PLACENAMES}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=placenamesbool value="1"> Placenames are descriptive.</label>
+      <label><input type="checkbox" name=placenamesbool value=true> Placenames are descriptive.</label>
     </div>
 
     </div>
@@ -279,7 +288,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filename" value="{{.FILENAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filenamebool value="1"> Filename is correct(this will be auto later...)</label>
+      <label><input type="checkbox" name=filenamebool value=true> Filename is correct(this will be auto later...)</label>
     </div>
 
     </div>
@@ -290,7 +299,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filetype" value="{{.FILETYPE}}" readonly>
    </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filetypebool value="1"> Will also be automated later</label>
+      <label><input type="checkbox" name=filetypebool value=true> Will also be automated later</label>
     </div>
 
     </div>
@@ -300,18 +309,19 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filedescription" value="{{.FILEDESCRIPTION}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filedescriptionbool value="1"> What even is this?</label>
+      <label><input type="checkbox" name=filedescriptionbool value=true> Describes the data</label>
     </div>
 
     </div>
-
   </div>
+
     <div class="form-group customborder">
+      {{.NOTES}}
       <h1><span class="label label-default">Quality Control Note</span></h1>
 	<br>
     <div class="form-group">
       <label class="control-label col-sm-2" for="Note">Note sent to researcher:</label>
-      <div class="col-sm-10">
+      <div class="col-sm-9">
         <textarea rows="8" class="form-control" name="note" ></textarea>
       </div>
     </div>
@@ -333,6 +343,7 @@ const EditTemplate string = `<html>
         </div>
     </div>
 </div>
+
 
  </div>
 </form>
