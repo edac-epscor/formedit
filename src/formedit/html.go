@@ -64,8 +64,9 @@ const StarterTemplate string =`<html>
           </div>
         </div>
       </nav>
-</div>
+
 {{.BODY}}
+</div>
 </body>
 </html>`
 
@@ -133,6 +134,8 @@ const EditTemplate string = `<html>
 
   <form class="form-horizontal" action="/formedit/save" method="post">
     <div class="form-group customborder">
+    {{.NOTES}}
+
       <h1><span class="label label-default">Dataset ID: {{.ID}}</span></h1>
     <div class="form-group">
       <!--<label class="control-label col-sm-2" for="id">ID:{{.ID}}</label>-->
@@ -146,7 +149,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="datasetname" value="{{.DATASETNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=datasetnamebool value=true> Dataset name is descriptive of the data</label>
+      <label><input type="checkbox" name=datasetnamebool value=true {{.DATASETNAMEBOOL}}> Dataset name is descriptive of the data</label>
     </div>
     </div>
     <div class="form-group">
@@ -155,7 +158,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="firstname" value="{{.FIRSTNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=firstnamebool value=true> First Name name is valid</label>
+      <label><input type="checkbox" name=firstnamebool value=true {{.FIRSTNAMEBOOL}}> First Name name is valid</label>
     </div>
 
     </div>
@@ -165,7 +168,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="lastname" value="{{.LASTNAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=lastnamebool value=true> Last name is valid</label>
+      <label><input type="checkbox" name=lastnamebool value=true {{.LASTNAMEBOOL}}> Last name is valid</label>
     </div>
 
     </div>
@@ -175,7 +178,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="email" value="{{.EMAIL}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=emailbool value=true> E-Mail appears to be valid</label>
+      <label><input type="checkbox" name=emailbool value=true {{.EMAILBOOL}}> E-Mail appears to be valid</label>
     </div>
 
     </div>
@@ -185,7 +188,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="phone" value="{{.PHONE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=phonebool value=true> Phone appears to be valid</label>
+      <label><input type="checkbox" name=phonebool value=true {{.PHONEBOOL}}> Phone appears to be valid</label>
     </div>
 
     </div>
@@ -195,7 +198,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="firstnamepi" value="{{.FIRSTNAMEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=firstnamepibool value=true> PI first name appears valid</label>
+      <label><input type="checkbox" name=firstnamepibool value=true {{.FIRSTNAMEPIBOOL}}> PI first name appears valid</label>
     </div>
 
     </div>
@@ -205,7 +208,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="lastnamepi" value="{{.LASTNAMEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=lastnamepibool value=true> This is a known PI</label>
+      <label><input type="checkbox" name=lastnamepibool value=true {{.LASTNAMEPIBOOL}}> This is a known PI</label>
     </div>
 
     </div>
@@ -215,7 +218,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="emailpi" value="{{.EMAILPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=emailpibool value=true>E-Mail is a know address of a PI</label>
+      <label><input type="checkbox" name=emailpibool value=true {{.EMAILPIBOOL}}>E-Mail is a know address of a PI</label>
     </div>
 
 
@@ -226,7 +229,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="phonepi" value="{{.PHONEPI}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=phonepibool value=true> Phone number is valid.</label>
+      <label><input type="checkbox" name=phonepibool value=true {{.PHONEPIBOOL}}> Phone number is valid.</label>
     </div>
 
     </div>
@@ -236,7 +239,7 @@ const EditTemplate string = `<html>
         <textarea readonly rows="8" class="form-control" name="abstract" >{{.ABSTRACT}}</textarea>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=abstractbool value=true> Abstract is valid and informitave.</label>
+      <label><input type="checkbox" name=abstractbool value=true {{.ABSTRACTBOOL}}> Abstract is valid and informitave.</label>
     </div>
 
     </div>
@@ -246,7 +249,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="collectiontitle" value="{{.COLLECTIONTITLE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=collectiontitlebool value=true> Collection Title is valid.</label>
+      <label><input type="checkbox" name=collectiontitlebool value=true {{.COLLECTIONTITLEBOOL}}> Collection Title is valid.</label>
     </div>
 
     </div>
@@ -256,7 +259,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="categorytitle" value="{{.CATEGORYTITLE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=categorytitlebool value=true> Category Title is valid</label>
+      <label><input type="checkbox" name=categorytitlebool value=true {{.CATEGORYTITLEBOOL}}> Category Title is valid</label>
     </div>
 
     </div>
@@ -267,7 +270,7 @@ const EditTemplate string = `<html>
       </div>
 
     <div class="col-sm-4">
-      <label><input type="checkbox" name="subcategorytitlebool" value=true> Subcategory is valid.</label>
+      <label><input type="checkbox" name="subcategorytitlebool" value=true {{.SUBCATEGORYTITLEBOOL}}> Subcategory is valid.</label>
     </div>
     </div>
 
@@ -277,7 +280,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="purpose" value="{{.PURPOSE}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=purposebool value=true> Purpose is descriptive.</label>
+      <label><input type="checkbox" name=purposebool value=true {{.PURPOSEBOOL}}> Purpose is descriptive.</label>
     </div>
 
     </div>
@@ -287,7 +290,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="otherinfo" value="{{.OTHERINFO}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=otherinfobool value=true> Other Info is descriptive (can be N/A)</label>
+      <label><input type="checkbox" name=otherinfobool value=true {{.OTHERINFOBOOL}}> Other Info is descriptive (can be blank)</label>
     </div>
 
     </div>
@@ -298,7 +301,7 @@ const EditTemplate string = `<html>
       </div>
 
     <div class="col-sm-4">
-      <label><input type="checkbox" name=keywordsbool value=true> Keywords are meaningful.</label>
+      <label><input type="checkbox" name=keywordsbool value=true {{.KEYWORDSBOOL}}> Keywords are meaningful.</label>
     </div>
 
     </div>
@@ -308,7 +311,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="placenames" value="{{.PLACENAMES}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=placenamesbool value=true> Placenames are descriptive.</label>
+      <label><input type="checkbox" name=placenamesbool value=true {{.PLACENAMESBOOL}}> Placenames are descriptive.</label>
     </div>
 
     </div>
@@ -318,7 +321,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filename" value="{{.FILENAME}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filenamebool value=true> Filename is correct(this will be auto later...)</label>
+      <label><input type="checkbox" name=filenamebool value=true {{.FILENAMEBOOL}}> Filename is correct(this will be auto later...)</label>
     </div>
 
     </div>
@@ -329,7 +332,7 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filetype" value="{{.FILETYPE}}" readonly>
    </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filetypebool value=true> Will also be automated later</label>
+      <label><input type="checkbox" name=filetypebool value=true {{.FILETYPEBOOL}}> Will also be automated later</label>
     </div>
 
     </div>
@@ -339,14 +342,13 @@ const EditTemplate string = `<html>
         <input type="text" class="form-control" name="filedescription" value="{{.FILEDESCRIPTION}}" readonly>
       </div>
     <div class="col-sm-4">
-      <label><input type="checkbox" name=filedescriptionbool value=true> Describes the data</label>
+      <label><input type="checkbox" name=filedescriptionbool value=true {{.FILEDESCRIPTIONBOOL}}> Describes the data</label>
     </div>
 
     </div>
   </div>
 
     <div class="form-group customborder">
-      {{.NOTES}}
       <h1><span class="label label-default">Quality Control Note</span></h1>
 	<br>
     <div class="form-group">
