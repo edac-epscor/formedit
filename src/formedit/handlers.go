@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"net/smtp"
+	"os"
 	"strconv"
 	"text/template"
 	"time"
-	//        "database/sql"
+	//	"io"
+	//	"io/util"
 )
 
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +28,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 		STATUS3   string
 		STATUS4   string
 		STATUS5   string
+		LOGO      string
 	}
 
 	token := getCookieByName(r.Cookies(), cookieid)
@@ -37,7 +41,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 			status := r.URL.Query().Get("status")
 			if status == "" {
 
-				params := &secretdict{BODY: "", STYLE: "", STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"]}
+				params := &secretdict{BODY: "", STYLE: "", STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 				t := template.New("test")
 				t, err := t.Parse(StarterTemplate)
 				LogErr(err)
@@ -61,21 +65,13 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if statnumber != "" {
-					//var count int
 					query := `select id, datasetname, firstname, lastname, email, datecreated from datasets where status = '` + statnumber + `' ORDER BY id;`
-					fmt.Println(query)
 					rows, err := formdb.Query(query)
 					LogErr(err)
 					for rows.Next() {
 						var id, datasetname, firstname, lastname, email, datecreated string
 						err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
-						body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-group-item-action"><span class="badge badge-default badge-pill">Dataset ID:`+id+`</span></p>Dataset Name: <strong>`+datasetname+`</strong>   Submitted by: <strong>`+firstname+` `+lastname+`</strong> E-Mail:<strong>`+email+`  </strong>Dataset Submitted:<strong>`+datecreated+`</strong></a>`
-//`<a class="btn btn-primary custom" href="/formedit/edit?id=` + id + `">` + id + `</a>`
-					//	count++
-					//	if count == 15 {
-					//		htmlstring = htmlstring + `</p>`
-					//		count = 0
-					//	}
+						body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-group-item-action"><span class="badge badge-default badge-pill">Dataset ID:` + id + `</span></p>Dataset Name: <strong>` + datasetname + `</strong></p>Submitted by: <strong>` + firstname + ` ` + lastname + `</p></strong>E-Mail:<strong>` + email + `  </p></strong><small class="text-muted">Dataset Created: ` + datecreated + `</small></a>`
 					}
 					body = `<div class="list-group">` + body + `</div>`
 					style := `<style>
@@ -88,7 +84,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                                                  }
                                                  </style>`
 
-					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"]}
+					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 					t := template.New("test")
 					t, err = t.Parse(StarterTemplate)
 					LogErr(err)
@@ -125,7 +121,6 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 			err = t.Execute(w, params)
 			LogErr(err)
 
-			//			w.Write([]byte("Sorry " + username + " you are not on the list of cool kids."))
 		}
 
 	} else {
@@ -150,14 +145,13 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                             </div>
                             </div>
                             </div>`
-		params := &secretdict{BODY: body, STYLE: style}
+		params := &secretdict{BODY: body, STYLE: style, LOGO: Logo}
 		t := template.New("error")
 		t, err := t.Parse(Bootstrap)
 		LogErr(err)
 		err = t.Execute(w, params)
 		LogErr(err)
 
-		//		w.Write([]byte("You need to be logged in to use this API :("))
 	}
 
 }
@@ -226,7 +220,8 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		note := r.FormValue("note")
 		t := time.Now().Format("2006-01-02 15:04:05")
 
-		fmt.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button)
+		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button)
+
 		if button == "accept" {
 			stmt, err := formdb.Prepare("UPDATE datasets SET status = status + 1 WHERE id =?")
 			LogErr(err)
@@ -250,23 +245,22 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 			log.Printf("ID = %d, affected = %d\n", id, affect)
 			LogErr(rowerr)
 
-			exists:=CheckRowExists(id)
-                        if exists==false{
-			stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, abstractbool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-			LogErr(err)
-			res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-			log.Println(res)
-			LogErr(err)
-			}else if exists==true{
-			stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
-                        LogErr(err)
-                        log.Println("setting filed status")
-                        res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
-                        log.Println(res)
-                        LogErr(err)
+			exists := CheckRowExists(id)
+			if exists == false {
+				stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, abstractbool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+				LogErr(err)
+				res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
+				log.Println(res)
+				LogErr(err)
+			} else if exists == true {
+				stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
+				LogErr(err)
+				log.Println("setting filed status")
+				res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
+				log.Println(res)
+				LogErr(err)
 			}
 
-			//fmt.Fprintln(w, "Dataset ID "+id+" has been accepted!")
 		} else if button == "reject" {
 			stmt, err := formdb.Prepare("UPDATE datasets SET status = status - 1, rejected=1 WHERE id =?")
 			LogErr(err)
@@ -288,57 +282,24 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 			log.Printf("ID = %d, affected = %d\n", id, affect)
 			LogErr(rowerr)
 
-
-                        exists:=CheckRowExists(id)
-                        if exists==false{
-                        stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-                        LogErr(err)
-                        log.Println("setting filed status")
-                        res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-                        log.Println(res)
-                        LogErr(err)
-                        }else if exists==true{
-                        stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
-                        LogErr(err)
-                        log.Println("setting filed status")
-                        res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
-                        log.Println(res)
-                        LogErr(err)
-                        }
-
-
-//			stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-//			LogErr(err)
-//			log.Println("setting filed status")
-//			res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-//			log.Println(res)
-//			LogErr(err)
-//			affect, rowerr = res.RowsAffected()
-//			log.Printf("ID = %d, affected = %d\n", id, affect)
-//			LogErr(rowerr)
-
-			//INSERT INTO notes (datasetid,note,date,decision) VALUES (255,"lol",'2017-03-08 07:48:58',"accepted");
-			/*        params := &save{RURL: ""}
-			          t := template.New("url")
-			          t, err := t.Parse(RedirectTemplate)
-			          LogErr(err)
-			          err = t.Execute(w, params)
-			          LogErr(err)
-
-			*/
-			//fmt.Fprintln(w, "Dataset ID "+id+" is rekt!")
-			//RedirectTemplate RURL
-		}
-
-		/*		var stat string
-				query := `select status from datasets where id = '` + id + `';`
-				rows, err := formdb.Query(query)
+			exists := CheckRowExists(id)
+			if exists == false {
+				stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 				LogErr(err)
-				for rows.Next() {
+				log.Println("setting filed status")
+				res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
+				log.Println(res)
+				LogErr(err)
+			} else if exists == true {
+				stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
+				LogErr(err)
+				log.Println("setting filed status")
+				res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
+				log.Println(res)
+				LogErr(err)
+			}
 
-					err = rows.Scan(&stat)
-					LogErr(err)
-				}*/
+		}
 		params := &save{RURL: "/formedit/?status=" + stat}
 		ut := template.New("url")
 		ut, err = ut.Parse(RedirectTemplate)
@@ -372,6 +333,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		FILENAME             string
 		FILETYPE             string
 		FILEDESCRIPTION      string
+		DATA                 string
 		STEP                 string
 		DISABLED1            string
 		DISABLED2            string
@@ -403,7 +365,9 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		PLACENAMESBOOL       string
 		FILENAMEBOOL         string
 		FILETYPEBOOL         string
+		DATABOOL             string
 		FILEDESCRIPTIONBOOL  string
+		LOGO                 string
 	}
 
 	token := getCookieByName(r.Cookies(), cookieid)
@@ -414,11 +378,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		var notes, color string
 		ID := r.URL.Query().Get("id")
 		authmap := AuthMap(auth)
-		/*TODO get notes from db and loop through to make this:
-		  `<div class="well"><p class="lead"><font color="grey"><h5>`+username+` `+date+`:
-		  </h5></font>`+note+`<br><br>Decision:<font color="red">`+decision+`</font></p></div>`
-		*/
-		notesquery := `SELECT note, date, decision, userid FROM notes WHERE datasetid='` + ID + `';`
+		notesquery := `SELECT note, date, decision, userid FROM notes WHERE datasetid='` + ID + `' ORDER BY date;`
 		var note, date, decision, username string
 		rows, err := formdb.Query(notesquery)
 		LogErr(err)
@@ -435,32 +395,21 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			LogErr(err)
 		}
 
-		//		authmap := AuthMap(auth)
-		var datasetname, id, userid, status, collectiontitle, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step string //, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool string
-		var datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool bool
-		/*		datasetnamebool = "true"
-				firstnamebool = "true"
-				lastnamebool = "true"
-				emailbool = "true"
-				phonebool = "true"
-				firstnamepibool = "true"
-				lastnamepibool = "true"
-				emailpibool = "true"
-				phonepibool = "true"
-				collectiontitlebool = "true"
-				categorytitlebool = "true"
-				subcategorytitlebool = "true"
-				purposebool = "true"
-				otherinfobool = "true"
-				keywordsbool = "true"
-				placenamesbool = "true"
-				filenamebool = "true"
-				filetypebool = "true"
-				filedescriptionbool = "true"
-				abstractbool = "true"
-		*/
-		//ID := r.URL.Query().Get("id")
-
+		var datasetname, id, userid, status, collectiontitle, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step, data string
+		var datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool, databool bool
+/*First make sure the collection id is greater than 0
+		var collid string
+                collidquery:=`select collectionid from datasets where id='`+ID+`';`
+		rows, err = formdb.Query(collidquery)
+		LogErr(err)
+                for rows.Next() {
+                            err = rows.Scan(&collid)
+		}
+		collidi, err := strconv.Atoi(collid)
+		if collidi <1 {
+		fmt.Println("yikes!")
+		}
+*/
 		query := `SELECT
                   datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step
                   FROM datasets, collections, categorys, subcategorys
@@ -468,28 +417,29 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		rows, err = formdb.Query(query)
 		LogErr(err)
 		for rows.Next() {
-			//***********************
-			query = `SELECT datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool FROM checks where datasetid='` + ID + `';`
+			query = `SELECT datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, databool FROM checks where datasetid='` + ID + `';`
 			checkrows, err := formdb.Query(query)
-			fmt.Println(query)
 			LogErr(err)
 			for checkrows.Next() {
-				err = checkrows.Scan(&datasetnamebool, &firstnamebool, &lastnamebool, &emailbool, &phonebool, &firstnamepibool, &lastnamepibool, &emailpibool, &phonepibool, &abstractbool, &collectiontitlebool, &categorytitlebool, &subcategorytitlebool, &purposebool, &otherinfobool, &keywordsbool, &placenamesbool, &filenamebool, &filetypebool, &filedescriptionbool)
+				err = checkrows.Scan(&datasetnamebool, &firstnamebool, &lastnamebool, &emailbool, &phonebool, &firstnamepibool, &lastnamepibool, &emailpibool, &phonepibool, &abstractbool, &collectiontitlebool, &categorytitlebool, &subcategorytitlebool, &purposebool, &otherinfobool, &keywordsbool, &placenamesbool, &filenamebool, &filetypebool, &filedescriptionbool, &databool)
 
 				LogErr(err)
+
 			}
-			fmt.Println("################################")
-			fmt.Println(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-			fmt.Println("################################")
+
 			err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
 			LogErr(err)
+			if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
+				////file exists
+				data = `<a href="/formedit/download/` + ID + `">Data Download</a></div>`
+			} else {
+				//file does not exist
+				data = `<font color="red"><strong>File not found!</strong></font></div>`
+			}
 
-			fmt.Println(datasetnamebool)
-			params = &valuedict{ID: id, DATASETNAME: datasetname, COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, FIRSTNAME: firstname, LASTNAME: lastname, EMAIL: email, PHONE: phone, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, EMAILPI: emailpi, PHONEPI: phonepi, ABSTRACT: abstract, PURPOSE: purpose, OTHERINFO: otherinfo, KEYWORDS: keywords, PLACENAMES: placenames, FILENAME: filename, FILETYPE: filetype, FILEDESCRIPTION: filedescription, STEP: step, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool)}
+			//                        fmt.Println("/uploads/"+IDtoName(userid)+"/"+filename)
+			params = &valuedict{ID: id, DATASETNAME: datasetname, COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, FIRSTNAME: firstname, LASTNAME: lastname, EMAIL: email, PHONE: phone, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, EMAILPI: emailpi, PHONEPI: phonepi, ABSTRACT: abstract, PURPOSE: purpose, OTHERINFO: otherinfo, KEYWORDS: keywords, PLACENAMES: placenames, FILENAME: filename, FILETYPE: filetype, FILEDESCRIPTION: filedescription, STEP: step, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
 
-			//  fmt.Println("ID: "+id+", DATASETNAME: "+datasetname+", COLLECTIONTITLE: "+collectiontitle+", CATEGORYTITLE: "+categorytitle+", SUBCATEGORYTITLE: "+subcategorytitle+", FIRSTNAME: "+firstname+", LASTNAME: "+lastname+", EMAIL: "+email+", PHONE: "+phone+", FIRSTNAMEPI: "+firstnamepi+", LASTNAMEPI: "+lastnamepi+", EMAILPI: "+emailpi+", PHONEPI: "+phonepi+", ABSTRACT: "+abstract+", PURPOSE: "+purpose+", OTHERINFO: "+otherinfo+", KEYWORDS: "+keywords+", PLACENAMES: "+placenames+", FILENAME: "+filename+", FILETYPE: "+filetype+", FILEDESCRIPTION: "+filedescription+", STEP: "+step+", STATUS1: "+authmap["status1"]+", DISABLED1: "+authmap["disabled1"]+", STATUS2: "+authmap["status2"]+", DISABLED2: "+authmap["disabled2"]+", STATUS3: "+authmap["status3"]+", DISABLED3: "+authmap["disabled3"]+", STATUS4: "+authmap["status4"]+", DISABLED4: "+authmap["disabled4"]+", STATUS5: "+authmap["status5"]+", DISABLED5: "+authmap["disabled5"]+", NOTES: "+notes)
-
-			//t := template.New("edit")
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
 		}
@@ -499,6 +449,26 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+}
+
+func Download(w http.ResponseWriter, r *http.Request) {
+	var userid, filename string
+	vars := mux.Vars(r)
+	id := vars["id"]
+	query := `SELECT userid, filename FROM datasets where id='` + id + `';`
+	rows, err := formdb.Query(query)
+	LogErr(err)
+	for rows.Next() {
+		err = rows.Scan(&userid, &filename)
+		LogErr(err)
+	}
+	pathtofile := "/uploads/" + IDtoName(userid) + "/" + filename
+	attachment := `attachment; filename=` + filename
+	fmt.Println(attachment)
+	w.Header().Set("Content-Disposition", attachment)
+	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+	w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
+	http.ServeFile(w, r, pathtofile)
 }
 
 func getCookieByName(cookie []*http.Cookie, name string) string {
@@ -587,10 +557,6 @@ func AuthMap(auth int) map[string]string {
 	return m
 }
 
-//func main() {
-//	send("hello there","lol")
-//}
-
 func send(recipient string, body string, subject string) {
 	from := "qualityassurance@edac.unm.edu"
 	pass := "fluhelk"
@@ -625,9 +591,9 @@ func ischecked(param bool) string {
 func CheckRowExists(id string) bool {
 	var check bool
 	err := formdb.QueryRow(`SELECT EXISTS (SELECT * FROM checks WHERE datasetid ='` + id + `');`).Scan(&check)
-	fmt.Println(id)
-	fmt.Println(check)
-	fmt.Println(id)
+	log.Println(id)
+	log.Println(check)
+	log.Println(id)
 
 	if err != nil {
 		log.Println(err)
@@ -636,3 +602,16 @@ func CheckRowExists(id string) bool {
 	return check
 }
 
+func IDtoName(id string) string {
+	var username string
+	query := `select name from users where uid ='` + id + `';`
+	rows, err := db.Query(query)
+	LogErr(err)
+	for rows.Next() {
+		err := rows.Scan(&username)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return username
+}

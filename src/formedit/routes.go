@@ -47,6 +47,12 @@ var routes = Routes{
                 "/save",
                 SaveEdit,
         },
+	        Route{
+                "Download",
+               	"get",
+                "/download/{id}",
+                Download,
+        },
 
 
 
