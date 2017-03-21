@@ -19,8 +19,9 @@ var db *sql.DB
 var formdb *sql.DB
 var UploadDIR string
 var cookieid string
+var configf = ReadConfig()
 func main() {
-	var configf = ReadConfig() //this is in config.go
+//	var configf = ReadConfig() //this is in config.go
 	UploadDIR = configf.UploadDir
 	cookieid = configf.CookieID
 	LogFile := configf.LogDir + "formedit.log"

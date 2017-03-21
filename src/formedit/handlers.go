@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
 	"log"
@@ -10,9 +11,7 @@ import (
 	"strconv"
 	"text/template"
 	"time"
-	"database/sql"
-	//	"io"
-	//	"io/util"
+	"strings"
 )
 
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
@@ -35,11 +34,17 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		var body string
+		var statusi int
 		auth, username := isAuthorized(token)
-		if auth >= 1 {
+                status := r.URL.Query().Get("status")
+		if status != ""{
+	        var err error
+                statusi, err = strconv.Atoi(status)
+		LogErr(err)
+		}
+		if auth >= 1 && auth+1>=statusi && statusi !=1{
 			//sort out what the viewer can see based on auth number returned by isAuthorized
 			authmap := AuthMap(auth)
-			status := r.URL.Query().Get("status")
 			if status == "" {
 
 				params := &secretdict{BODY: "", STYLE: "", STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
@@ -85,7 +90,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                                                  }
                                                  </style>`
 
-					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
+                                        params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 					t := template.New("test")
 					t, err = t.Parse(StarterTemplate)
 					LogErr(err)
@@ -94,6 +99,8 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
+
+                        authmap := AuthMap(auth)
 			w.WriteHeader(http.StatusUnauthorized)
 			style := `.footer-images {
                         margin: auto;
@@ -109,15 +116,15 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 			body := `<div class="container">
                              <div class="jumbotron">
                              <h1>Not Authorized</h1>
-                             <p>` + username + ` is not autorized for this app.</p>
+                             <p>` + username + ` is not autorized for this view.</p>
                              <div class="footer-images">
                              <img alt="Bouncer" src="` + Bouncer + `"/>
                             </div>
                             </div>
                             </div>`
-			params := &secretdict{BODY: body, STYLE: style}
+                        params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 			t := template.New("error")
-			t, err := t.Parse(Bootstrap)
+			t, err := t.Parse(StarterTemplate)
 			LogErr(err)
 			err = t.Execute(w, params)
 			LogErr(err)
@@ -380,6 +387,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		ID := r.URL.Query().Get("id")
 		authmap := AuthMap(auth)
 		notesquery := `SELECT note, date, decision, userid FROM notes WHERE datasetid='` + ID + `' ORDER BY date;`
+		log.Println(notesquery)
 		var note, date, decision, username string
 		rows, err := formdb.Query(notesquery)
 		LogErr(err)
@@ -396,34 +404,36 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			LogErr(err)
 		}
 
-		//var datasetname, id, status, collectiontitle, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step string
-                var id, datasetname, userid, status, collectiontitle, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step sql.NullString
-
-		var data string
-		//var userid sql.NullString
+		var id, datasetname, userid, status, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step sql.NullString
+		collectionisworking := true
+		var data, collectiontest, query, collectiontitle string
 		var datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool, databool bool
 
+		collidquery := `SELECT
+		                collections.collectiontitle
+		                FROM datasets,
+		                collections
+		                WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id;`
 
+		err = formdb.QueryRow(collidquery).Scan(&collectiontest)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				collectionisworking = false
+			} else {
+				LogErr(err)
 
-
-/*First make sure the collection id is greater than 0
-		var collid string
-                collidquery:=`select collectionid from datasets where id='`+ID+`';`
-		rows, err = formdb.Query(collidquery)
-		LogErr(err)
-                for rows.Next() {
-                            err = rows.Scan(&collid)
+			}
+		} else {
+			collectionisworking = true
+			log.Println(collectiontest + " found")
 		}
-		collidi, err := strconv.Atoi(collid)
-		if collidi <1 {
-		fmt.Println("yikes!")
+		if collectionisworking {
+			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step FROM datasets, collections, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
+		} else {
+			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step FROM datasets, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
 		}
-*/
 
-		query := `SELECT
-                  datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step
-                  FROM datasets, collections, categorys, subcategorys
-                  WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
+		log.Println(query)
 		rows, err = formdb.Query(query)
 		LogErr(err)
 		for rows.Next() {
@@ -436,19 +446,20 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 				LogErr(err)
 
 			}
-
-			err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+			if collectionisworking {
+				err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+			} else {
+				err = rows.Scan(&id, &datasetname, &userid, &status, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+				collectiontitle = "INVALID COLLECTION TITLE!!!"
+			}
 			LogErr(err)
 			if _, err := os.Stat("/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)); err == nil {
-				////file exists
 				data = `<a href="/formedit/download/` + ID + `">Data Download</a></div>`
 			} else {
-				//file does not exist
 				data = `<font color="red"><strong>File not found!</strong></font></div>`
 			}
 
-			//                        fmt.Println("/uploads/"+IDtoName(userid)+"/"+filename)
-			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: Null2String(collectiontitle), CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
+			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
 
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
@@ -481,6 +492,18 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, pathtofile)
 }
 
+func InsertView(w http.ResponseWriter, r *http.Request) {
+        id := mux.Vars(r)["id"]
+	token := getCookieByName(r.Cookies(), cookieid)
+	if token != "" {
+		auth, username := isAuthorized(token)
+		if auth >= 3 {
+			w.Write([]byte(username+id))
+
+		}
+	}
+}
+
 func getCookieByName(cookie []*http.Cookie, name string) string {
 	cookieLen := len(cookie)
 	result := ""
@@ -504,11 +527,11 @@ func isAuthorized(token string) (int, string) {
 		}
 	}
 
-	if username == "hbarrett" {
-		return 3, username
-	} else if username == "hbarrett" || username == "jsavickas" {
+	if stringInSlice(username, strings.Fields(configf.Admins)){
+		return 4, username
+	} else if stringInSlice(username, strings.Fields(configf.Managers)){
 		return 2, username
-	} else if username == "gvalentin" || username == "hbarrett" || username == "sdiller" || username == "jsavickas" {
+	} else if stringInSlice(username, strings.Fields(configf.Users)) {
 		return 1, username
 	} else {
 		return 0, username
@@ -550,7 +573,7 @@ func AuthMap(auth int) map[string]string {
 			"status4":   ``,
 			"status5":   ``,
 		}
-	} else if auth == 3 {
+	} else if auth == 4 {
 		m = map[string]string{
 			"disabled1": ``,
 			"disabled2": ``,
@@ -626,12 +649,22 @@ func IDtoName(id string) string {
 	return username
 }
 
-func Null2String(str sql.NullString)string{
-var returnstring string
- if str.Valid {
-    returnstring=str.String
- } else {
-    returnstring="NULL"
- }
-return returnstring
+func Null2String(str sql.NullString) string {
+	var returnstring string
+	if str.Valid {
+		returnstring = str.String
+	} else {
+		returnstring = "NULL"
+	}
+	return returnstring
 }
+
+func stringInSlice(a string, list []string) bool {
+    for _, b := range list {
+        if b == a {
+            return true
+        }
+    }
+    return false
+}
+

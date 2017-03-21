@@ -22,6 +22,9 @@ type Config struct {
 	FormDBUsername string
         FormDBPassword string
         FormDBName     string
+	Admins     string
+	Managers	string
+	Users		string
 
 }
 

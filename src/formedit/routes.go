@@ -53,7 +53,12 @@ var routes = Routes{
                 "/download/{id}",
                 Download,
         },
-
+          	Route{
+                "InsertView",
+                "get",
+                "/insertview/{id}",
+                InsertView,
+        },
 
 
 }
