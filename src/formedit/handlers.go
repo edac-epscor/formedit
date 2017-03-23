@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -9,9 +10,9 @@ import (
 	"net/smtp"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
-	"strings"
 )
 
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
@@ -36,15 +37,16 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 		var body string
 		var statusi int
 		auth, username := isAuthorized(token)
-                status := r.URL.Query().Get("status")
-		if status != ""{
-	        var err error
-                statusi, err = strconv.Atoi(status)
-		LogErr(err)
+		status := r.URL.Query().Get("status")
+		if status != "" {
+			var err error
+			statusi, err = strconv.Atoi(status)
+			LogErr(err)
 		}
-		if auth >= 1 && auth+1>=statusi && statusi !=1{
+		if auth >= 1 && auth+1 >= statusi && statusi != 1 {
 			//sort out what the viewer can see based on auth number returned by isAuthorized
 			authmap := AuthMap(auth)
+			//	authmap := SetCurrent(authmap, status)
 			if status == "" {
 
 				params := &secretdict{BODY: "", STYLE: "", STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
@@ -58,14 +60,19 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 				switch status {
 				case "5":
 					statnumber = "5"
+					authmap["disabled5"] = ` class="active"`
 				case "4":
 					statnumber = "4"
+					authmap["disabled4"] = ` class="active"`
 				case "3":
 					statnumber = "3"
+					authmap["disabled3"] = ` class="active"`
 				case "2":
 					statnumber = "2"
+					authmap["disabled2"] = ` class="active"`
 				case "1":
 					statnumber = "1"
+					authmap["disabled1"] = ` class="active"`
 				default:
 					fmt.Fprintln(w, "bad status")
 				}
@@ -90,7 +97,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                                                  }
                                                  </style>`
 
-                                        params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
+					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 					t := template.New("test")
 					t, err = t.Parse(StarterTemplate)
 					LogErr(err)
@@ -100,7 +107,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 
-                        authmap := AuthMap(auth)
+			authmap := AuthMap(auth)
 			w.WriteHeader(http.StatusUnauthorized)
 			style := `.footer-images {
                         margin: auto;
@@ -122,7 +129,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                             </div>
                             </div>
                             </div>`
-                        params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
+			params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
 			t := template.New("error")
 			t, err := t.Parse(StarterTemplate)
 			LogErr(err)
@@ -165,23 +172,27 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func SaveEdit(w http.ResponseWriter, r *http.Request) {
-
+        host:=r.Host
 	type save struct {
 		RURL string
 	}
 	token := getCookieByName(r.Cookies(), cookieid)
 	auth, username := isAuthorized(token)
-	if auth >= 1 {
-		id := r.FormValue("id")
-		var stat string
-		query := `select status from datasets where id = '` + id + `';`
-		rows, err := formdb.Query(query)
-		LogErr(err)
-		for rows.Next() {
+	id := r.FormValue("id")
+	var stat string
+	query := `select status from datasets where id = '` + id + `';`
+	rows, err := formdb.Query(query)
+	LogErr(err)
+	for rows.Next() {
 
-			err = rows.Scan(&stat)
-			LogErr(err)
-		}
+		err = rows.Scan(&stat)
+		LogErr(err)
+	}
+
+	var statusi int
+	statusi, err = strconv.Atoi(stat)
+	LogErr(err)
+	if auth >= 1 && auth+1 >= statusi && statusi != 1 {
 
 		datasetname := r.FormValue("datasetname")
 		firstname := r.FormValue("firstname")
@@ -228,85 +239,20 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		note := r.FormValue("note")
 		t := time.Now().Format("2006-01-02 15:04:05")
 
-		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button)
+		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button + "-" + host)
 
 		if button == "accept" {
-			stmt, err := formdb.Prepare("UPDATE datasets SET status = status + 1 WHERE id =?")
-			LogErr(err)
-			log.Println(username + " ran this SQL query: UPDATE datasets SET status = status + 1 WHERE id =" + id + ";")
-			res, err := stmt.Exec(id)
-			log.Println(res)
-			LogErr(err)
-			affect, rowerr := res.RowsAffected()
-			log.Printf("ID = %d, affected = %d\n", id, affect)
-			LogErr(rowerr)
-
-			stmt, err = formdb.Prepare("INSERT INTO notes (datasetid,note,date,decision,userid) VALUES (?,?,?,?,?)")
-			LogErr(err)
-
-			log.Println(username + " ran this SQL INSERT: INSERT INTO notes (datasetid,note,date,decision) VALUES (" + id + "," + note + "," + t + "," + button + ")")
-
-			res, err = stmt.Exec(id, note, t, button, username)
-			log.Println(res)
-			LogErr(err)
-			affect, rowerr = res.RowsAffected()
-			log.Printf("ID = %d, affected = %d\n", id, affect)
-			LogErr(rowerr)
-
-			exists := CheckRowExists(id)
-			if exists == false {
-				stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, abstractbool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-				LogErr(err)
-				res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-				log.Println(res)
-				LogErr(err)
-			} else if exists == true {
-				stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
-				LogErr(err)
-				log.Println("setting filed status")
-				res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
-				log.Println(res)
-				LogErr(err)
-			}
-
+			UpdateStatus(id, button, username)
+			MakeNote(id, note, t, button, username)
+			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
+//			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "reject" {
-			stmt, err := formdb.Prepare("UPDATE datasets SET status = status - 1, rejected=1 WHERE id =?")
-			LogErr(err)
-			log.Println(username + " ran this SQL query: UPDATE datasets SET status = status - 1 WHERE id =" + id + ";")
-			res, err := stmt.Exec(id)
-			log.Println(res)
-			LogErr(err)
-			affect, rowerr := res.RowsAffected()
-			log.Printf("ID = %d, affected = %d\n", id, affect)
-			LogErr(rowerr)
-
-			stmt, err = formdb.Prepare("INSERT INTO notes (datasetid,note,date,decision,userid) VALUES (?,?,?,?,?)")
-			LogErr(err)
-			log.Println(username + " ran this SQL INSERT: INSERT INTO notes (datasetid,note,date,decision) VALUES (" + id + "," + note + "," + t + "," + button + ")")
-			res, err = stmt.Exec(id, note, t, button, username)
-			log.Println(res)
-			LogErr(err)
-			affect, rowerr = res.RowsAffected()
-			log.Printf("ID = %d, affected = %d\n", id, affect)
-			LogErr(rowerr)
-
-			exists := CheckRowExists(id)
-			if exists == false {
-				stmt, err = formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-				LogErr(err)
-				log.Println("setting filed status")
-				res, err = stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-				log.Println(res)
-				LogErr(err)
-			} else if exists == true {
-				stmt, err = formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
-				LogErr(err)
-				log.Println("setting filed status")
-				res, err = stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
-				log.Println(res)
-				LogErr(err)
-			}
-
+			UpdateStatus(id, button, username)
+			MakeNote(id, note, t, button, username)
+			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
+//			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+		} else if button == "note" {
+			MakeNote(id, note, t, button, username)
 		}
 		params := &save{RURL: "/formedit/?status=" + stat}
 		ut := template.New("url")
@@ -493,12 +439,19 @@ func Download(w http.ResponseWriter, r *http.Request) {
 }
 
 func InsertView(w http.ResponseWriter, r *http.Request) {
-        id := mux.Vars(r)["id"]
+	id := mux.Vars(r)["id"]
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		auth, username := isAuthorized(token)
 		if auth >= 3 {
-			w.Write([]byte(username+id))
+			w.Write([]byte(username + id))
+
+			/*
+			   buf := new(bytes.Buffer)
+			   t := template.Must(template.New("json").Parse(JSON))
+			   err = t.Execute(buf, '')
+			   fmt.Println(buf.String())
+			*/
 
 		}
 	}
@@ -527,9 +480,9 @@ func isAuthorized(token string) (int, string) {
 		}
 	}
 
-	if stringInSlice(username, strings.Fields(configf.Admins)){
+	if stringInSlice(username, strings.Fields(configf.Admins)) {
 		return 4, username
-	} else if stringInSlice(username, strings.Fields(configf.Managers)){
+	} else if stringInSlice(username, strings.Fields(configf.Managers)) {
 		return 2, username
 	} else if stringInSlice(username, strings.Fields(configf.Users)) {
 		return 1, username
@@ -544,6 +497,7 @@ func LogErr(err error) {
 		log.Fatal(err)
 	}
 }
+
 
 func AuthMap(auth int) map[string]string {
 	var m map[string]string
@@ -590,19 +544,36 @@ func AuthMap(auth int) map[string]string {
 	return m
 }
 
-func send(recipient string, body string, subject string) {
+func send(recipient string, subject string, firstname string, topmessage string, buttonlink string, buttontext string, note string) {
+	type maildict struct {
+		USERFIRSTNAME string
+		TOPMESSAGE    string
+		BUTTONLINK    string
+		BUTTONTEXT    string
+		NOTES         string
+	}
+
 	from := "qualityassurance@edac.unm.edu"
 	pass := "fluhelk"
 	to := recipient
+	params := &maildict{USERFIRSTNAME: firstname, TOPMESSAGE: topmessage, BUTTONLINK: buttonlink, BUTTONTEXT: buttontext, NOTES: note}
+	buf := new(bytes.Buffer)
+	t := template.New("mail")
+	t, err := t.Parse(MAIL)
+	LogErr(err)
+	err = t.Execute(buf, params)
 
 	msg := "From: " + from + "\n" +
 		"To: " + to + "\n" +
-		"Subject: " + subject + "\n\n" +
-		body
-
-	err := smtp.SendMail("edacmail.unm.edu:587",
+		"Subject: " + subject + "\n" +
+		"Content-Type: text/html\n\n" +
+		buf.String()
+	log.Println(msg)
+	toslc := strings.Split(to, ",")
+	fmt.Println(toslc[0])
+	err = smtp.SendMail("edacmail.unm.edu:587",
 		smtp.PlainAuth("", from, pass, "edacmail.unm.edu"),
-		from, []string{to}, []byte(msg))
+              from, toslc, []byte(msg))
 
 	if err != nil {
 		log.Printf("smtp error: %s", err)
@@ -636,6 +607,7 @@ func CheckRowExists(id string) bool {
 }
 
 func IDtoName(id string) string {
+
 	var username string
 	query := `select name from users where uid ='` + id + `';`
 	rows, err := db.Query(query)
@@ -649,6 +621,26 @@ func IDtoName(id string) string {
 	return username
 }
 
+func ContactFromUserID(name string) (string, string) {
+	var realname, email string
+	query := `select realname.realname, users.mail from realname, users where users.uid=realname.uid and users.name='` + name + `';`
+	err := db.QueryRow(query).Scan(&realname, &email)
+	LogErr(err)
+	return realname, email
+
+}
+
+func ContactFromID(id string) (string, string) {
+	var userid, realname, email string
+	formquery := `select userid from datasets where id=` + id + `;`
+	err := formdb.QueryRow(formquery).Scan(&userid)
+	LogErr(err)
+	query := `select realname.realname, users.mail from realname, users where users.uid=realname.uid and users.uid='` + userid + `';`
+	err = db.QueryRow(query).Scan(&realname, &email)
+	LogErr(err)
+	return realname, email
+}
+
 func Null2String(str sql.NullString) string {
 	var returnstring string
 	if str.Valid {
@@ -660,11 +652,132 @@ func Null2String(str sql.NullString) string {
 }
 
 func stringInSlice(a string, list []string) bool {
-    for _, b := range list {
-        if b == a {
-            return true
-        }
-    }
-    return false
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
 
+func MakeNote(id string, note string, t string, button string, username string) {
+	stmt, err := formdb.Prepare("INSERT INTO notes (datasetid,note,date,decision,userid) VALUES (?,?,?,?,?)")
+	LogErr(err)
+	log.Println(username + " ran this SQL INSERT: INSERT INTO notes (datasetid,note,date,decision,userid) VALUES (" + id + "," + note + "," + t + "," + button + "," + username + ")")
+	res, err := stmt.Exec(id, note, t, button, username)
+	log.Println(res)
+	LogErr(err)
+	affect, rowerr := res.RowsAffected()
+	log.Printf("ID = %d, affected = %d\n", id, affect)
+	LogErr(rowerr)
+}
+
+func UpdateStatus(id string, button string, username string) {
+	var addsub string
+	if button == "accept" {
+		addsub = "+"
+	} else if button == "reject" {
+		addsub = "-"
+	}
+	if button == "accept" || button == "reject" {
+		stmt, err := formdb.Prepare("UPDATE datasets SET status = status " + addsub + " 1, rejected=1 WHERE id =?")
+		LogErr(err)
+		log.Println(username + " ran this SQL query: UPDATE datasets SET status = status " + addsub + " 1 WHERE id =" + id + ";")
+		res, err := stmt.Exec(id)
+		log.Println(res)
+		LogErr(err)
+		affect, rowerr := res.RowsAffected()
+		log.Printf("ID = %d, affected = %d\n", id, affect)
+		LogErr(rowerr)
+	}
+}
+
+func SetBools(id string, datasetnamebool bool, firstnamebool bool, lastnamebool bool, emailbool bool, phonebool bool, firstnamepibool bool, lastnamepibool bool, emailpibool bool, phonepibool bool, abstractbool bool, collectiontitlebool bool, categorytitlebool bool, subcategorytitlebool bool, purposebool bool, otherinfobool bool, keywordsbool bool, placenamesbool bool, filenamebool bool, filetypebool bool, filedescriptionbool bool) {
+
+	exists := CheckRowExists(id)
+	if exists == false {
+		stmt, err := formdb.Prepare("INSERT INTO checks (datasetid, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		LogErr(err)
+		log.Println("setting filed status")
+		res, err := stmt.Exec(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
+		log.Println(res)
+		LogErr(err)
+	} else if exists == true {
+		stmt, err := formdb.Prepare("UPDATE checks set datasetnamebool=?, firstnamebool=?, lastnamebool=?, emailbool=?, phonebool=?, firstnamepibool=?, lastnamepibool=?, emailpibool=?, phonepibool=?, abstractbool=?, collectiontitlebool=?, categorytitlebool=?, subcategorytitlebool=?, purposebool=?, otherinfobool=?, keywordsbool=?, placenamesbool=?, filenamebool=?, filetypebool=?, filedescriptionbool=? WHERE datasetid=?")
+		LogErr(err)
+		log.Println("setting filed status")
+		res, err := stmt.Exec(datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, id)
+		log.Println(res)
+		LogErr(err)
+	}
+
+}
+
+func SendMail(id string, datasetname string, username string, t string, note string, status string, button string, emailbool bool, emailpibool bool, host string) {
+
+	var recipients, anote, buttonlink, buttontext, message, realname string
+	if button == "accept" {
+		if status == "2" {
+			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for your inspection.`
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+			buttonlink = `https://`+host+`/formedit/edit?id=` + id
+			buttontext = "Dataset:" + id
+
+			for _, recip := range strings.Fields(configf.Managers) {
+				realname, email := ContactFromUserID(recip)
+				recipients = recipients + `"`+realname + `" <` + email + `>, `
+			}
+
+		} else if status == "3" {
+
+			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for insertion into GSToRE.`
+
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+			buttonlink = `https://`+host+`/formedit/edit?id=` + id
+			buttontext = "Dataset:" + id
+
+			for _, recip := range strings.Fields(configf.Admins) {
+				realname, email := ContactFromUserID(recip)
+				recipients = recipients + realname + ` <` + email + `>, `
+			}
+
+		}
+	} else if button == "reject" {
+			if status == "2" {
+			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been flagged for edit and has had it status changed to "In Progress". Please log into reporting.nmepscor.org, correct any problems that were found, and resubmit for approval. Please feel free to reply to this e-mail with any questions or concerns.`
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                  	buttonlink = "https://reporting.nmepscor.org/datasetentry"
+                	buttontext = "DataSet Entry Form"
+                        realname, email:=ContactFromID(id)
+			recipients = recipients + realname + ` <` + email + `>`
+			} else if status == "3" {
+
+                        message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by a manager and its status changed to "Submitted for Approval". Please see notes on further steps.`
+                        anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                        buttonlink = `https://`+host+`/formedit/edit?id=` + id
+                        buttontext = "Dataset:" + id
+
+                        for _, recip := range strings.Fields(configf.Users) {
+                                realname, email := ContactFromUserID(recip)
+                                recipients = recipients + realname + ` <` + email + `>, `
+                        }
+
+			} else if status == "4" {
+
+                        message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected and status set to "Approved". Please see notes for further steps.`
+                        anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                        buttonlink = `https://`+host+`/formedit/edit?id=` + id
+                        buttontext = "Dataset:" + id
+
+                        for _, recip := range strings.Fields(configf.Users) {
+                                realname, email := ContactFromUserID(recip)
+                                recipients = recipients + realname + ` <` + email + `>, `
+                        }
+
+
+			}
+	}
+        recipients = strings.TrimSuffix(recipients, ", ")
+        fmt.Println(recipients + " EPSCoR Data Review " + realname + " " + message+ " " + buttonlink+ " " + buttontext+ " " + anote)
+        send(recipients, "EPSCoR Data Review", realname, message, buttonlink, buttontext, anote)
+}
