@@ -548,8 +548,7 @@ const GSTOREXML string = `<?xml version="1.0" encoding="UTF-8"?>
             <enttypl>{{.COLLECTIONTITLE}}</enttypl>
             <enttypd>{{.TITLE}}</enttypd>
             <enttypds>{{.FIRSTNAMEPI}} {{.LASTNAMEPI}}</enttypds>
-         </enttyp>
-      </detailed>
+         </enttyp>{{.ATTRIBUTES}}</detailed>
    </eainfo>
    <distinfo>
       <distrib>

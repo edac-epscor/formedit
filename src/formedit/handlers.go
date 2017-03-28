@@ -246,12 +246,12 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-						SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "reject" {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-						SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "note" {
 			MakeNote(id, note, t, button, username)
 		}
@@ -453,123 +453,161 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 		SUBCATEGORYTITLE string
 		RAWXML           string
 		BASENAME         string
-		ISEMBARGOED string
-		RELEASEDATE string
-		ORIGEPSG string
-		FEATURES string
-		GEOMTYPE string
-		RECORDS string
-		EPSG string
-		WESTBC string
-		EASTBC string
-		NORTHBC string
-		SOUTHBC string
-		EXTENSION string
-		DATAONEARCHIVE string
-		GROUPNAME string
-		COLLECTIONTITLE string
-		ABSTRACT string
-		ADDRESS string
-		CITY string
-		COLLECTIONNAME string
-		TITLE string
-		EMAILPI string
-		PHONEPI string
-		PURPOSE string
-		STATE string
-		ZIP string
-		GEOFORM string
-
-
-
+		ISEMBARGOED      string
+		RELEASEDATE      string
+		ORIGEPSG         string
+		FEATURES         string
+		GEOMTYPE         string
+		RECORDS          string
+		EPSG             string
+		WESTBC           string
+		EASTBC           string
+		NORTHBC          string
+		SOUTHBC          string
+		EXTENSION        string
+		DATAONEARCHIVE   string
+		GROUPNAME        string
+		COLLECTIONTITLE  string
+		ABSTRACT         string
+		ADDRESS          string
+		CITY             string
+		COLLECTIONNAME   string
+		TITLE            string
+		EMAILPI          string
+		PHONEPI          string
+		PURPOSE          string
+		STATE            string
+		ZIP              string
+		GEOFORM          string
+		ATTRIBUTES       string
 	}
-	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, rawxml, userid, filename, basename, isembargoed, releasedate, lat, lon, westbc, eastbc, northbc, southbc, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi string
+
+	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, rawxml, userid, filename, basename, isembargoed, releasedate, lat, lon, westbc, eastbc, northbc, southbc, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi, attributes string
+	var releasedatenull, address1, address2, address3 sql.NullString
 
 	//Bill has these hardcoded, so I am to for now, but this should be dynamic no?
 	//Why is records randomly set to 201?
-		epsg:="epsg"
-                origepsg:="26913"
-                features:="1"
-                geomtype:="POLYGON"
-                records:="201"
-		geoform:="spreadsheet"
+	epsg := "epsg"
+	origepsg := "26913"
+	features := "1"
+	geomtype := "POLYGON"
+	records := "201"
+	geoform := "spreadsheet"
 
-        var releasedatenull, address1, address2, address3 sql.NullString
 	id := mux.Vars(r)["id"]
-	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
-	err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
-        if Null2String(releasedatenull)=="NULL"{
-	isembargoed="False"
-        releasedate=string(time.Now().Format("2006-01-02"))
-	}else {
-	isembargoed="True"
-        releasedate=Null2String(releasedatenull)
-	}
-	LogErr(err)
-
-
-	/*	file, err := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
+	/*	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
+		err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
+		if Null2String(releasedatenull) == "NULL" {
+			isembargoed = "False"
+			releasedate = string(time.Now().Format("2006-01-02"))
+		} else {
+			isembargoed = "True"
+			releasedate = Null2String(releasedatenull)
+		}
 		LogErr(err)
-	defer file.Close()
-	// Only the first 512 bytes are used to sniff the content type.
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
-	LogErr(err)
-
-	// Reset the read pointer if necessary.
-	file.Seek(0, 0)
-
-	// Always returns a valid content-type and "application/octet-stream" if no others seemed to match.
-	contentType := http.DetectContentType(buffer)
-
-	fmt.Println(contentType)
 	*/
+	/*	file, err := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
+			LogErr(err)
+		defer file.Close()
+		// Only the first 512 bytes are used to sniff the content type.
+		buffer := make([]byte, 512)
+		_, err = file.Read(buffer)
+		LogErr(err)
 
+		// Reset the read pointer if necessary.
+		file.Seek(0, 0)
+
+		// Always returns a valid content-type and "application/octet-stream" if no others seemed to match.
+		contentType := http.DetectContentType(buffer)
+
+		fmt.Println(contentType)
+	*/
 
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
-		auth, username := isAuthorized(token)
+		auth, _ := isAuthorized(token)
 		if auth >= 3 {
 
+			query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
+			err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
+			if Null2String(releasedatenull) == "NULL" {
+				isembargoed = "False"
+				releasedate = string(time.Now().Format("2006-01-02"))
+			} else {
+				isembargoed = "True"
+				releasedate = Null2String(releasedatenull)
+			}
+			LogErr(err)
 
 			id := mux.Vars(r)["id"]
-			query := `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
-			err := formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
+			query = `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
+			err = formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
+			fmt.Println("a")
 			LogErr(err)
 			basename = strings.TrimSuffix(filename, filepath.Ext(filename))
-			if uploadtodataone=="Yes"{
-			dataonearchive="True"
-			}else if uploadtodataone=="No"{
-			dataonearchive="False"
+			if uploadtodataone == "Yes" {
+				dataonearchive = "True"
+			} else if uploadtodataone == "No" {
+				dataonearchive = "False"
 			}
-                        westbc=lon
-                        eastbc=lon
-                        northbc=lat
-                        southbc=lat
-			uploaduser=IDtoName(userid)
-			extension:=strings.TrimPrefix(filetype, "*.")
+			westbc = lon
+			eastbc = lon
+			northbc = lat
+			southbc = lat
+			uploaduser = IDtoName(userid)
+			extension := strings.TrimPrefix(filetype, "*.")
 
 			var address string
-			address=MakeAddr(address1,address)
-			address=MakeAddr(address2,address)
-			address=MakeAddr(address3,address)
+			address = MakeAddr(address1, address)
+			address = MakeAddr(address2, address)
+			address = MakeAddr(address3, address)
+			//lol
+                        fmt.Println("b")
+			query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+			rows, err := formdb.Query(query)
+			LogErr(err)
+			piname:=firstnamepi+` `+lastnamepi
+			fmt.Println(piname)
+			for rows.Next() {
+				var field, description, units, frequency, aggregation, nodata, dommin, dommax string
+				err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
+				attributemap := map[string]string{
+					"field":            field,
+					"description": description,
+					"units":            units,
+					"frequency":        frequency,
+					"aggregation":      aggregation,
+					"nodata":           nodata,
+					"dommin":           dommin,
+					"dommax":           dommax,
+					"attrdefs": 	    piname,
+				}
 
-                        title:= groupname+` `+categorytitle+`, `+collectiontitle+` - `+datasetname
+				attributemap = NormalizeAttributes(attributemap)
 
-			params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG:origepsg, FEATURES:features, GEOMTYPE:geomtype, RECORDS:records, EPSG:epsg, WESTBC:westbc, EASTBC:eastbc, NORTHBC:northbc, SOUTHBC:southbc, EXTENSION:extension, DATAONEARCHIVE:dataonearchive, GROUPNAME:groupname, TITLE:title, GEOFORM:geoform, ABSTRACT:abstract, PURPOSE:purpose, ADDRESS:address, CITY:city, STATE:state, ZIP:zip, PHONEPI:phonepi, EMAILPI:emailpi, COLLECTIONTITLE:collectiontitle}
+				attributes = attributes + BuildAttributes(attributemap)
+				//                                            	var id, datasetname, firstname, lastname, email, datecreated string
+				//                                             	err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
+				//                                            	body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-gro$
+			}
+//fmt.Println(attributes)
+			//hb
+
+			title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
+
+			params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES:attributes}
 
 			jsonbuf := new(bytes.Buffer)
 			jt := template.Must(template.New("json").Parse(JSON))
 			err = jt.Execute(jsonbuf, params)
 			LogErr(err)
-		//	w.Write(jsonbuf.Bytes())
-                        xmlbuf := new(bytes.Buffer)
-                        xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
-                        err = xmlt.Execute(xmlbuf, params)
+			//	w.Write(jsonbuf.Bytes())
+			xmlbuf := new(bytes.Buffer)
+			xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
+			err = xmlt.Execute(xmlbuf, params)
+			fmt.Println("nothing?")
+			fmt.Println(xmlbuf.String())
 			w.Write(xmlbuf.Bytes())
-
-
-
 
 		}
 	}
@@ -612,7 +650,7 @@ func isAuthorized(token string) (int, string) {
 
 func LogErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
@@ -899,12 +937,66 @@ func SendMail(id string, datasetname string, username string, t string, note str
 	send(recipients, subject, realname, message, buttonlink, buttontext, anote)
 }
 
+func MakeAddr(addr sql.NullString, newaddr string) string {
 
-func MakeAddr( addr sql.NullString, newaddr string) string{
-
-                        if Null2String(addr) !="NULL"{
-                       	newaddr=newaddr+`<address>`+Null2String(addr)+`</address>`
-                        }
+	if Null2String(addr) != "NULL" {
+		newaddr = newaddr + `<address>` + Null2String(addr) + `</address>`
+	}
 	return newaddr
 }
 
+func NormalizeAttributes(attr map[string]string) map[string]string {
+	fmt.Println(attr["attrdefs"])
+
+	if len(attr["rdommin"])==0{
+	attr["rdommin"]="NA"
+	}
+        if len(attr["rdommax"])==0{
+        attr["rdommax"]="NA"
+       	}
+        if len(attr["nodata"])==0{
+        attr["nodata"]="NA"
+       	}
+        if len(attr["aggregation"])==0{
+        attr["aggregation"]="NA"
+       	}
+        if len(attr["frequency"])==0{
+        attr["frequency"]="NA"
+       	}
+        if len(attr["units"])==0{
+        attr["units"]="NA"
+       	}
+        if len(attr["description"])==0{
+        attr["description"]="NA"
+       	}
+        if len(attr["field"])==0{
+        attr["field"]="NA"
+       	}
+//	for k, v := range attr {
+//		if len(v) == 0 {
+//			attr[k] = "NA"
+//		}
+//	fmt.Println(attr["rdommin"])
+//	}
+  //      fmt.Println(attr["rdommin"])
+	return attr
+}
+
+func BuildAttributes(attr map[string]string) string{
+
+	//for k, v := range attr{
+	xml:=`<attr>
+        <attrlabl>`+attr["field"]+`</attrlabl>
+        <attrdef>`+attr["description"]+`</attrdef>
+        <attrdefs>`+attr["attrdefs"]+`</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>`+attr["rdommin"]+`</rdommin>
+            <rdommax>`+attr["rdommax"]+`</rdommax>
+            <attrunit>`+attr["units"]+`</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>`
+//	}
+return xml
+}
