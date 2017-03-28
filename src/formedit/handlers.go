@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -172,7 +173,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func SaveEdit(w http.ResponseWriter, r *http.Request) {
-        host:=r.Host
+	host := r.Host
 	type save struct {
 		RURL string
 	}
@@ -245,12 +246,12 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-//			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+						SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "reject" {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-//			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+						SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "note" {
 			MakeNote(id, note, t, button, username)
 		}
@@ -402,7 +403,10 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			if _, err := os.Stat("/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)); err == nil {
 				data = `<a href="/formedit/download/` + ID + `">Data Download</a></div>`
 			} else {
-				data = `<font color="red"><strong>File not found!</strong></font></div>`
+				//data = `<font color="grey">/uploads/` + IDtoName(Null2String(userid)) + "/" + Null2String(filename)+`
+				data = `<h4><font color="red">File not found! </font><small class="text-muted">/uploads/` + IDtoName(Null2String(userid)) + "/" + Null2String(filename) + `</small></h4>`
+
+				//<font color="blue"> in ` + "/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)</font>
 			}
 
 			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
@@ -439,19 +443,133 @@ func Download(w http.ResponseWriter, r *http.Request) {
 }
 
 func InsertView(w http.ResponseWriter, r *http.Request) {
+	type jsondict struct {
+		DATASETNAME      string
+		UPLOADUSER       string
+		FILENAME         string
+		FIRSTNAMEPI      string
+		LASTNAMEPI       string
+		CATEGORYTITLE    string
+		SUBCATEGORYTITLE string
+		RAWXML           string
+		BASENAME         string
+		ISEMBARGOED string
+		RELEASEDATE string
+		ORIGEPSG string
+		FEATURES string
+		GEOMTYPE string
+		RECORDS string
+		EPSG string
+		WESTBC string
+		EASTBC string
+		NORTHBC string
+		SOUTHBC string
+		EXTENSION string
+		DATAONEARCHIVE string
+		GROUPNAME string
+		COLLECTIONTITLE string
+		ABSTRACT string
+		ADDRESS string
+		CITY string
+		COLLECTIONNAME string
+		TITLE string
+		EMAILPI string
+		PHONEPI string
+		PURPOSE string
+		STATE string
+		ZIP string
+		GEOFORM string
+
+
+
+	}
+	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, rawxml, userid, filename, basename, isembargoed, releasedate, lat, lon, westbc, eastbc, northbc, southbc, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi string
+
+	//Bill has these hardcoded, so I am to for now, but this should be dynamic no?
+	//Why is records randomly set to 201?
+		epsg:="epsg"
+                origepsg:="26913"
+                features:="1"
+                geomtype:="POLYGON"
+                records:="201"
+		geoform:="spreadsheet"
+
+        var releasedatenull, address1, address2, address3 sql.NullString
 	id := mux.Vars(r)["id"]
+	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
+	err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
+        if Null2String(releasedatenull)=="NULL"{
+	isembargoed="False"
+        releasedate=string(time.Now().Format("2006-01-02"))
+	}else {
+	isembargoed="True"
+        releasedate=Null2String(releasedatenull)
+	}
+	LogErr(err)
+
+
+	/*	file, err := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
+		LogErr(err)
+	defer file.Close()
+	// Only the first 512 bytes are used to sniff the content type.
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
+	LogErr(err)
+
+	// Reset the read pointer if necessary.
+	file.Seek(0, 0)
+
+	// Always returns a valid content-type and "application/octet-stream" if no others seemed to match.
+	contentType := http.DetectContentType(buffer)
+
+	fmt.Println(contentType)
+	*/
+
+
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		auth, username := isAuthorized(token)
 		if auth >= 3 {
-			w.Write([]byte(username + id))
 
-			/*
-			   buf := new(bytes.Buffer)
-			   t := template.Must(template.New("json").Parse(JSON))
-			   err = t.Execute(buf, '')
-			   fmt.Println(buf.String())
-			*/
+
+			id := mux.Vars(r)["id"]
+			query := `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
+			err := formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
+			LogErr(err)
+			basename = strings.TrimSuffix(filename, filepath.Ext(filename))
+			if uploadtodataone=="Yes"{
+			dataonearchive="True"
+			}else if uploadtodataone=="No"{
+			dataonearchive="False"
+			}
+                        westbc=lon
+                        eastbc=lon
+                        northbc=lat
+                        southbc=lat
+			uploaduser=IDtoName(userid)
+			extension:=strings.TrimPrefix(filetype, "*.")
+
+			var address string
+			address=MakeAddr(address1,address)
+			address=MakeAddr(address2,address)
+			address=MakeAddr(address3,address)
+
+                        title:= groupname+` `+categorytitle+`, `+collectiontitle+` - `+datasetname
+
+			params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG:origepsg, FEATURES:features, GEOMTYPE:geomtype, RECORDS:records, EPSG:epsg, WESTBC:westbc, EASTBC:eastbc, NORTHBC:northbc, SOUTHBC:southbc, EXTENSION:extension, DATAONEARCHIVE:dataonearchive, GROUPNAME:groupname, TITLE:title, GEOFORM:geoform, ABSTRACT:abstract, PURPOSE:purpose, ADDRESS:address, CITY:city, STATE:state, ZIP:zip, PHONEPI:phonepi, EMAILPI:emailpi, COLLECTIONTITLE:collectiontitle}
+
+			jsonbuf := new(bytes.Buffer)
+			jt := template.Must(template.New("json").Parse(JSON))
+			err = jt.Execute(jsonbuf, params)
+			LogErr(err)
+		//	w.Write(jsonbuf.Bytes())
+                        xmlbuf := new(bytes.Buffer)
+                        xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
+                        err = xmlt.Execute(xmlbuf, params)
+			w.Write(xmlbuf.Bytes())
+
+
+
 
 		}
 	}
@@ -497,7 +615,6 @@ func LogErr(err error) {
 		log.Fatal(err)
 	}
 }
-
 
 func AuthMap(auth int) map[string]string {
 	var m map[string]string
@@ -573,7 +690,7 @@ func send(recipient string, subject string, firstname string, topmessage string,
 	fmt.Println(toslc[0])
 	err = smtp.SendMail("edacmail.unm.edu:587",
 		smtp.PlainAuth("", from, pass, "edacmail.unm.edu"),
-              from, toslc, []byte(msg))
+		from, toslc, []byte(msg))
 
 	if err != nil {
 		log.Printf("smtp error: %s", err)
@@ -720,12 +837,12 @@ func SendMail(id string, datasetname string, username string, t string, note str
 		if status == "2" {
 			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for your inspection.`
 			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
-			buttonlink = `https://`+host+`/formedit/edit?id=` + id
+			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			buttontext = "Dataset:" + id
 
 			for _, recip := range strings.Fields(configf.Managers) {
 				realname, email := ContactFromUserID(recip)
-				recipients = recipients + `"`+realname + `" <` + email + `>, `
+				recipients = recipients + `"` + realname + `" <` + email + `>, `
 			}
 
 		} else if status == "3" {
@@ -733,7 +850,7 @@ func SendMail(id string, datasetname string, username string, t string, note str
 			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for insertion into GSToRE.`
 
 			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
-			buttonlink = `https://`+host+`/formedit/edit?id=` + id
+			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			buttontext = "Dataset:" + id
 
 			for _, recip := range strings.Fields(configf.Admins) {
@@ -743,41 +860,51 @@ func SendMail(id string, datasetname string, username string, t string, note str
 
 		}
 	} else if button == "reject" {
-			if status == "2" {
+		if status == "2" {
 			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been flagged for edit and has had it status changed to "In Progress". Please log into reporting.nmepscor.org, correct any problems that were found, and resubmit for approval. Please feel free to reply to this e-mail with any questions or concerns.`
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                  	buttonlink = "https://reporting.nmepscor.org/datasetentry"
-                	buttontext = "DataSet Entry Form"
-                        realname, email:=ContactFromID(id)
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			buttonlink = "https://reporting.nmepscor.org/datasetentry"
+			buttontext = "DataSet Entry Form"
+			realname, email := ContactFromID(id)
 			recipients = recipients + realname + ` <` + email + `>`
-			} else if status == "3" {
+		} else if status == "3" {
 
-                        message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by a manager and its status changed to "Submitted for Approval". Please see notes on further steps.`
-                        anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                        buttonlink = `https://`+host+`/formedit/edit?id=` + id
-                        buttontext = "Dataset:" + id
+			message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by a manager and its status changed to "Submitted for Approval". Please see notes on further steps.`
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			buttonlink = `https://` + host + `/formedit/edit?id=` + id
+			buttontext = "Dataset:" + id
 
-                        for _, recip := range strings.Fields(configf.Users) {
-                                realname, email := ContactFromUserID(recip)
-                                recipients = recipients + realname + ` <` + email + `>, `
-                        }
-
-			} else if status == "4" {
-
-                        message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected and status set to "Approved". Please see notes for further steps.`
-                        anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username  + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                        buttonlink = `https://`+host+`/formedit/edit?id=` + id
-                        buttontext = "Dataset:" + id
-
-                        for _, recip := range strings.Fields(configf.Users) {
-                                realname, email := ContactFromUserID(recip)
-                                recipients = recipients + realname + ` <` + email + `>, `
-                        }
-
-
+			for _, recip := range strings.Fields(configf.Users) {
+				realname, email := ContactFromUserID(recip)
+				recipients = recipients + realname + ` <` + email + `>, `
 			}
+
+		} else if status == "4" {
+
+			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected and status set to "Approved". Please see notes for further steps.`
+			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			buttonlink = `https://` + host + `/formedit/edit?id=` + id
+			buttontext = "Dataset:" + id
+
+			for _, recip := range strings.Fields(configf.Users) {
+				realname, email := ContactFromUserID(recip)
+				recipients = recipients + realname + ` <` + email + `>, `
+			}
+
+		}
 	}
-        recipients = strings.TrimSuffix(recipients, ", ")
-        fmt.Println(recipients + " EPSCoR Data Review " + realname + " " + message+ " " + buttonlink+ " " + buttontext+ " " + anote)
-        send(recipients, "EPSCoR Data Review", realname, message, buttonlink, buttontext, anote)
+	recipients = strings.TrimSuffix(recipients, ", ")
+	subject := "EPSCoR Data Review of " + datasetname
+	fmt.Println(recipients + " EPSCoR Data Review " + realname + " " + message + " " + buttonlink + " " + buttontext + " " + anote)
+	send(recipients, subject, realname, message, buttonlink, buttontext, anote)
 }
+
+
+func MakeAddr( addr sql.NullString, newaddr string) string{
+
+                        if Null2String(addr) !="NULL"{
+                       	newaddr=newaddr+`<address>`+Null2String(addr)+`</address>`
+                        }
+	return newaddr
+}
+
