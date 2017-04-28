@@ -149,6 +149,12 @@ body {
   padding: 10px;
   width: auto;
 }
+
+.datasettitle {
+  background-color: #04488b;
+  color: white;
+
+}
 </style>
 
 
@@ -179,13 +185,18 @@ body {
     {{.NOTES}}
 </div>
     <div class="form-group customborder">
-      <h1><span class="label label-default">Dataset ID: {{.ID}}</span></h1>
-    <div class="form-group">
-      <!--<label class="control-label col-sm-2" for="id">ID:{{.ID}}</label>-->
-      <div class="col-sm-6">
-        <input type="hidden" class="form-control" name="id" value="{{.ID}}" readonly>
-      </div>
-    </div>
+
+
+      <div class="row">
+         <div class="col-lg-6 col-lg-offset-3 ">
+            <div class="form-group customborder datasettitle">Dataset ID: {{.ID}}</br> Submitted by: {{.SUBMITTERNAME}} </br> E-Mail: {{.SUBMITTEREMAIL}} </br><small class="text-muted">Dataset Created: {{.DATECREATED}}</small></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+        <div class="col-sm-12 alert alert-info text-center ">Check the boxes if the content is valid.</div>
+        </div>
+
     <div class="form-group">
       <label class="control-label col-sm-2" for="datasetname">Dataset Name :</label>
       <div class="col-sm-6">
@@ -625,6 +636,69 @@ const GSTOREXML string = `<?xml version="1.0" encoding="UTF-8"?>
       <mettc>local time</mettc>
    </metainfo>
 </metadata>`
+
+
+const JSONlol string = `{"description": "{{.DATASETNAME}}","orig_epsg": {{.ORIGEPSG}},"taxonomy": "file","basename": "{{.BASENAME}}","is_embargoed": "{{.ISEMBARGOED}}","spatial":{"epsg": "{{.EPSG}}","geomtype": "{{.GEOMTYPE}}","features": "{{.FEATURES}}","records": {{.RECORDS}},"bbox": "{{.WESTBC}},{{.SOUTHBC}},{{.EASTBC}},{{.NORTHBC}}"},"sources":[{"mimetype": "application/x-zip-compressed","files":["/geodata/energize/uploads/{{.UPLOADUSER}}/{{.FILENAME}}"],"set": "original","external": "False","extension": "{{.EXTENSION}}"}],"active": "True","dataone_archive":"{{.DATAONEARCHIVE}}","releasedate":"{{.RELEASEDATE}}","author":"{{.FIRSTNAMEPI}} {{.LASTNAMEPI}}","categories": [{"theme": "{{.CATEGORYTITLE}}","subtheme": "{{.SUBCATEGORYTITLE}}","groupname": "{{.GROUPNAME}}"}],"apps":["energize"],"standards":["FGDC-STD-001-1998","ISO-19115:2003"],"project": "NM EPSCoR R4","services": [],"formats": ["{{.EXTENSION}}"],"metadata": {"xml": "{{.RAWXML}}","upgrade": "true","standard": "FGDC-STD-001-1998"}}`
+
+
+const TABLEJSON string = `{
+    "description": "{{.DATASETNAME}}",
+    "orig_epsg": {{.ORIGEPSG}},
+    "taxonomy": "vector",
+    "basename": "{{.BASENAME}}",
+    "is_embargoed": "{{.ISEMBARGOED}}",
+    "spatial": {
+        "epsg": {{.EPSG}},
+        "geomtype": "{{.GEOMTYPE}}",
+        "features": "{{.FEATURES}}",
+        "records": {{.RECORDS}},
+        "bbox": "{{.WESTBC}},{{.SOUTHBC}},{{.EASTBC}},{{.NORTHBC}}"
+    },
+    "active": "False",
+    "services": [],
+    "categories": [
+            {
+             	"theme": "{{.CATEGORYTITLE}}",
+                "subtheme": "{{.SUBCATEGORYTITLE}}",
+                "groupname": "{{.GROUPNAME}}"
+            }
+     ],
+    "dates": {
+        "start": "{{.DATESTART}}",
+        "end": "{{.DATEEND}}"
+    },
+    "sources": [{
+        "mimetype": "application/x-zip-compressed",
+        "files": ["/geodata/energize/uploads/{{.UPLOADUSER}}/{{.FILENAME}}"],
+        "set": "original",
+        "external": "False",
+        "extension": "zip"
+    }],
+    "apps": ["energize"],
+    "standards": [
+        "FGDC-STD-001-1998",
+        "ISO-19115:2003",
+        "ISO-19119",
+        "ISO-19110"
+    ],
+    "project": "NM EPSCoR R4",
+    "formats": [
+        "zip",
+        "shp",
+        "kml",
+        "gml",
+        "json",
+        "xls",
+        "csv",
+        "geojson"
+    ],
+    "metadata": {
+        "xml": "{{.RAWXML}}",
+        "upgrade": "true",
+        "standard": "FGDC-STD-001-1998"
+    }
+}`
+
 
 const JSON string = `{
         "description": "{{.DATASETNAME}}",

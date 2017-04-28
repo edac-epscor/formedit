@@ -1,19 +1,27 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
+	//	"io"
+	//	"encoding/json"
+	"encoding/csv"
+	"encoding/xml"
 	"fmt"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+	//    "github.com/tealeg/xlsx"
 )
 
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +95,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 						err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
 						body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-group-item-action"><span class="badge badge-default badge-pill">Dataset ID:` + id + `</span></p>Dataset Name: <strong>` + datasetname + `</strong></p>Submitted by: <strong>` + firstname + ` ` + lastname + `</p></strong>E-Mail:<strong>` + email + `  </p></strong><small class="text-muted">Dataset Created: ` + datecreated + `</small></a>`
 					}
-					body = `<div class="list-group">` + body + `</div>`
+					body = `<div class="list-group list-group-item-action">` + body + `</div>`
 					style := `<style>
                                                  .custom{
                                                   width:76px!important;
@@ -242,12 +250,7 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 
 		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button + "-" + host)
 
-		if button == "accept" {
-			UpdateStatus(id, button, username)
-			MakeNote(id, note, t, button, username)
-			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
-		} else if button == "reject" {
+		if button == "accept" || button == "reject" {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
@@ -323,6 +326,9 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		DATABOOL             string
 		FILEDESCRIPTIONBOOL  string
 		LOGO                 string
+                SUBMITTERNAME        string
+                SUBMITTEREMAIL       string
+                DATECREATED          string
 	}
 
 	token := getCookieByName(r.Cookies(), cookieid)
@@ -351,7 +357,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			LogErr(err)
 		}
 
-		var id, datasetname, userid, status, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step sql.NullString
+		var id, datasetname, userid, status, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step, datecreated sql.NullString
 		collectionisworking := true
 		var data, collectiontest, query, collectiontitle string
 		var datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool, databool bool
@@ -375,9 +381,9 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			log.Println(collectiontest + " found")
 		}
 		if collectionisworking {
-			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step FROM datasets, collections, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
+			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, collections.collectiontitle, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step, datasets.datecreated FROM datasets, collections, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.collectionid=collections.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
 		} else {
-			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step FROM datasets, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
+			query = `SELECT datasets.id, datasets.datasetname, datasets.userid, datasets.status, categorys.categorytitle, subcategorys.subcategorytitle, datasets.firstname, datasets.lastname, datasets.email, datasets.phone, datasets.firstnamepi, datasets.lastnamepi, datasets.emailpi, datasets.phonepi, datasets.abstract, datasets.purpose, datasets.otherinfo, datasets.keywords, datasets.placenames, datasets.filename, datasets.filetype, datasets.filedescription, datasets.step, datasets.datecreated FROM datasets, categorys, subcategorys WHERE datasets.id = '` + ID + `' AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id;`
 		}
 
 		log.Println(query)
@@ -394,14 +400,15 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 
 			}
 			if collectionisworking {
-				err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+				err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step, &datecreated)
 			} else {
-				err = rows.Scan(&id, &datasetname, &userid, &status, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step)
+				err = rows.Scan(&id, &datasetname, &userid, &status, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step, &datecreated)
 				collectiontitle = "INVALID COLLECTION TITLE!!!"
 			}
 			LogErr(err)
+                        submittername, submitteremail := ContactFromUserID(IDtoName(Null2String(userid)))
 			if _, err := os.Stat("/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)); err == nil {
-				data = `<a href="/formedit/download/` + ID + `">Data Download</a></div>`
+				data = `<a href="/formedit/download/` + ID + `">Data Download</a>`
 			} else {
 				//data = `<font color="grey">/uploads/` + IDtoName(Null2String(userid)) + "/" + Null2String(filename)+`
 				data = `<h4><font color="red">File not found! </font><small class="text-muted">/uploads/` + IDtoName(Null2String(userid)) + "/" + Null2String(filename) + `</small></h4>`
@@ -409,7 +416,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 				//<font color="blue"> in ` + "/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)</font>
 			}
 
-			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
+			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool), SUBMITTERNAME:submittername, SUBMITTEREMAIL:submitteremail, DATECREATED:Null2String(datecreated)}
 
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
@@ -423,23 +430,28 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 }
 
 func Download(w http.ResponseWriter, r *http.Request) {
-	var userid, filename string
-	vars := mux.Vars(r)
-	id := vars["id"]
-	query := `SELECT userid, filename FROM datasets where id='` + id + `';`
-	rows, err := formdb.Query(query)
-	LogErr(err)
-	for rows.Next() {
-		err = rows.Scan(&userid, &filename)
+	token := getCookieByName(r.Cookies(), cookieid)
+	auth, _ := isAuthorized(token)
+	if auth >= 1 {
+
+		var userid, filename string
+		vars := mux.Vars(r)
+		id := vars["id"]
+		query := `SELECT userid, filename FROM datasets where id='` + id + `';`
+		rows, err := formdb.Query(query)
 		LogErr(err)
+		for rows.Next() {
+			err = rows.Scan(&userid, &filename)
+			LogErr(err)
+		}
+		pathtofile := "/uploads/" + IDtoName(userid) + "/" + filename
+		attachment := `attachment; filename="` + filename + `"`
+		fmt.Println(attachment)
+		w.Header().Set("Content-Disposition", attachment)
+		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+		w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
+		http.ServeFile(w, r, pathtofile)
 	}
-	pathtofile := "/uploads/" + IDtoName(userid) + "/" + filename
-	attachment := `attachment; filename=` + filename
-	fmt.Println(attachment)
-	w.Header().Set("Content-Disposition", attachment)
-	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
-	w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
-	http.ServeFile(w, r, pathtofile)
 }
 
 func InsertView(w http.ResponseWriter, r *http.Request) {
@@ -487,47 +499,19 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 
 	//Bill has these hardcoded, so I am to for now, but this should be dynamic no?
 	//Why is records randomly set to 201?
-	epsg := "epsg"
+	epsg := "4326"
 	origepsg := "26913"
 	features := "1"
 	geomtype := "POLYGON"
-	records := "201"
+	records := "201" //<-this is the numbe of records?
 	geoform := "spreadsheet"
 
 	id := mux.Vars(r)["id"]
-	/*	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
-		err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
-		if Null2String(releasedatenull) == "NULL" {
-			isembargoed = "False"
-			releasedate = string(time.Now().Format("2006-01-02"))
-		} else {
-			isembargoed = "True"
-			releasedate = Null2String(releasedatenull)
-		}
-		LogErr(err)
-	*/
-	/*	file, err := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
-			LogErr(err)
-		defer file.Close()
-		// Only the first 512 bytes are used to sniff the content type.
-		buffer := make([]byte, 512)
-		_, err = file.Read(buffer)
-		LogErr(err)
-
-		// Reset the read pointer if necessary.
-		file.Seek(0, 0)
-
-		// Always returns a valid content-type and "application/octet-stream" if no others seemed to match.
-		contentType := http.DetectContentType(buffer)
-
-		fmt.Println(contentType)
-	*/
-
+	post := r.URL.Query().Get("post")
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		auth, _ := isAuthorized(token)
 		if auth >= 3 {
-
 			query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
 			err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
 			if Null2String(releasedatenull) == "NULL" {
@@ -542,72 +526,148 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 			id := mux.Vars(r)["id"]
 			query = `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
 			err = formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
-			fmt.Println("a")
-			LogErr(err)
-			basename = strings.TrimSuffix(filename, filepath.Ext(filename))
-			if uploadtodataone == "Yes" {
-				dataonearchive = "True"
-			} else if uploadtodataone == "No" {
-				dataonearchive = "False"
-			}
-			westbc = lon
-			eastbc = lon
-			northbc = lat
-			southbc = lat
-			uploaduser = IDtoName(userid)
-			extension := strings.TrimPrefix(filetype, "*.")
+			fmt.Println(filetype)
+			if filetype == "*.csv" {
+				if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
+					f, _ := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
 
-			var address string
-			address = MakeAddr(address1, address)
-			address = MakeAddr(address2, address)
-			address = MakeAddr(address3, address)
-			//lol
-                        fmt.Println("b")
-			query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
-			rows, err := formdb.Query(query)
-			LogErr(err)
-			piname:=firstnamepi+` `+lastnamepi
-			fmt.Println(piname)
-			for rows.Next() {
-				var field, description, units, frequency, aggregation, nodata, dommin, dommax string
-				err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
-				attributemap := map[string]string{
-					"field":            field,
-					"description": description,
-					"units":            units,
-					"frequency":        frequency,
-					"aggregation":      aggregation,
-					"nodata":           nodata,
-					"dommin":           dommin,
-					"dommax":           dommax,
-					"attrdefs": 	    piname,
+					csvr := csv.NewReader(bufio.NewReader(f))
+					records, err := csvr.ReadAll()
+					LogErr(err)
+					firstlabel := records[0][0]
+
+					alllabels := records[0]
+					//datecolumn := ""
+					var datefield, timefield int
+					for i := 0; i < len(alllabels); i += 1 {
+						lab := alllabels[i]
+						//fmt.Println(lab)
+						if strings.ToLower(lab) == "date" {
+							datefield = i
+						}
+						if strings.ToLower(lab) == "time" {
+							timefield = i
+						}
+					}
+					fmt.Println(getcurrentdataformat(records, firstlabel, datefield))
+					for i := range records {
+						// Element count.
+
+						//fmt.Printf("Elements: %v", len(records[i]))
+						//fmt.Println()
+						// Elements.
+						if records[i][0] != firstlabel {
+
+							var stime string
+							stime = records[i][datefield] + " " + records[i][timefield]
+							timeindex, err := time.Parse("1/2/2006 15:04:05", stime)
+							LogErr(err)
+							observed := timeindex.Format("20060102T15:04:05")
+							_ = observed
+							//							fmt.Println(records[i][1])
+						}
+					}
+					//              fmt.Println(csvr[0])
+					//	for {
+					//		record, err := csvr.Read()
+					//              fmt.Println(record[0])
+					// Stop at EOF.
+					//		if err == io.EOF {
+					//			break
+					//		}
+					// Display record.
+					// ... Display record length.
+					// ... Display all individual elements of the slice.
+					//	fmt.Println(record)
+					//	fmt.Println(len(record))
+					//	for value := range record {
+					//		fmt.Printf("  %v\n", record[value])
+					//	}
+					//					}
+					//
+					//				} else {
+					//					fmt.Println("file not found!")
 				}
 
-				attributemap = NormalizeAttributes(attributemap)
+			} else {
+				//fmt.Println("Not a csv")
 
-				attributes = attributes + BuildAttributes(attributemap)
-				//                                            	var id, datasetname, firstname, lastname, email, datecreated string
-				//                                             	err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
-				//                                            	body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-gro$
+				//			LogErr(err)
+
+				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
+				if uploadtodataone == "Yes" {
+					dataonearchive = "True"
+				} else if uploadtodataone == "No" {
+					dataonearchive = "False"
+				}
+				westbc = lon
+				eastbc = lon
+				northbc = lat
+				southbc = lat
+				uploaduser = IDtoName(userid)
+				extension := strings.TrimPrefix(filetype, "*.")
+
+				var address string
+				address = MakeAddr(address1, address)
+				address = MakeAddr(address2, address)
+				address = MakeAddr(address3, address)
+				query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+				rows, err := formdb.Query(query)
+				LogErr(err)
+				piname := firstnamepi + ` ` + lastnamepi
+				for rows.Next() {
+					var field, description, units, frequency, aggregation, nodata, dommin, dommax string
+					err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
+					attributemap := map[string]string{
+						"field":       field,
+						"description": description,
+						"units":       units,
+						"frequency":   frequency,
+						"aggregation": aggregation,
+						"nodata":      nodata,
+						"dommin":      dommin,
+						"dommax":      dommax,
+						"attrdefs":    piname,
+					}
+
+					attributemap = NormalizeAttributes(attributemap)
+
+					attributes = attributes + BuildAttributes(attributemap)
+				}
+
+				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
+
+				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+
+				jsonbuf := new(bytes.Buffer)
+				jt := template.Must(template.New("json").Parse(JSON))
+				err = jt.Execute(jsonbuf, params)
+				LogErr(err)
+				w.Header().Set("Content-Type", "application/json")
+				w.Write(jsonbuf.Bytes())
+				xmlbuf := new(bytes.Buffer)
+				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
+				err = xmlt.Execute(xmlbuf, params)
+				fmt.Println(xml.Marshal(xmlbuf.Bytes()))
+				if strings.EqualFold(post, "True") {
+					fmt.Println("Inserting")
+					req, err := http.NewRequest("POST", "http://129.24.63.66/gstore_v3/apps/energize/datasets", jsonbuf)
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept-Encoding", "gzip, deflate")
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						panic(err)
+					}
+					defer resp.Body.Close()
+
+					fmt.Println("response Status:", resp.Status)
+					fmt.Println("response Headers:", resp.Header)
+					body, _ := ioutil.ReadAll(resp.Body)
+					fmt.Println("response Body:", string(body))
+
+				}
 			}
-//fmt.Println(attributes)
-			//hb
-
-			title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
-
-			params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES:attributes}
-
-			jsonbuf := new(bytes.Buffer)
-			jt := template.Must(template.New("json").Parse(JSON))
-			err = jt.Execute(jsonbuf, params)
-			LogErr(err)
-			//	w.Write(jsonbuf.Bytes())
-			xmlbuf := new(bytes.Buffer)
-			xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
-			err = xmlt.Execute(xmlbuf, params)
-			fmt.Println("nothing?")
-			fmt.Println(xmlbuf.String())
-			w.Write(xmlbuf.Bytes())
 
 		}
 	}
@@ -948,55 +1008,107 @@ func MakeAddr(addr sql.NullString, newaddr string) string {
 func NormalizeAttributes(attr map[string]string) map[string]string {
 	fmt.Println(attr["attrdefs"])
 
-	if len(attr["rdommin"])==0{
-	attr["rdommin"]="NA"
+	if len(attr["rdommin"]) == 0 {
+		attr["rdommin"] = "NA"
 	}
-        if len(attr["rdommax"])==0{
-        attr["rdommax"]="NA"
-       	}
-        if len(attr["nodata"])==0{
-        attr["nodata"]="NA"
-       	}
-        if len(attr["aggregation"])==0{
-        attr["aggregation"]="NA"
-       	}
-        if len(attr["frequency"])==0{
-        attr["frequency"]="NA"
-       	}
-        if len(attr["units"])==0{
-        attr["units"]="NA"
-       	}
-        if len(attr["description"])==0{
-        attr["description"]="NA"
-       	}
-        if len(attr["field"])==0{
-        attr["field"]="NA"
-       	}
-//	for k, v := range attr {
-//		if len(v) == 0 {
-//			attr[k] = "NA"
-//		}
-//	fmt.Println(attr["rdommin"])
-//	}
-  //      fmt.Println(attr["rdommin"])
+	if len(attr["rdommax"]) == 0 {
+		attr["rdommax"] = "NA"
+	}
+	if len(attr["nodata"]) == 0 {
+		attr["nodata"] = "NA"
+	}
+	if len(attr["aggregation"]) == 0 {
+		attr["aggregation"] = "NA"
+	}
+	if len(attr["frequency"]) == 0 {
+		attr["frequency"] = "NA"
+	}
+	if len(attr["units"]) == 0 {
+		attr["units"] = "NA"
+	}
+	if len(attr["description"]) == 0 {
+		attr["description"] = "NA"
+	}
+	if len(attr["field"]) == 0 {
+		attr["field"] = "NA"
+	}
+	//	for k, v := range attr {
+	//		if len(v) == 0 {
+	//			attr[k] = "NA"
+	//		}
+	//	fmt.Println(attr["rdommin"])
+	//	}
+	//      fmt.Println(attr["rdommin"])
 	return attr
 }
 
-func BuildAttributes(attr map[string]string) string{
+func BuildAttributes(attr map[string]string) string {
 
 	//for k, v := range attr{
-	xml:=`<attr>
-        <attrlabl>`+attr["field"]+`</attrlabl>
-        <attrdef>`+attr["description"]+`</attrdef>
-        <attrdefs>`+attr["attrdefs"]+`</attrdefs>
+	xml := `<attr>
+        <attrlabl>` + attr["field"] + `</attrlabl>
+        <attrdef>` + attr["description"] + `</attrdef>
+        <attrdefs>` + attr["attrdefs"] + `</attrdefs>
         <attrdomv>
           <rdom>
-            <rdommin>`+attr["rdommin"]+`</rdommin>
-            <rdommax>`+attr["rdommax"]+`</rdommax>
-            <attrunit>`+attr["units"]+`</attrunit>
+            <rdommin>` + attr["rdommin"] + `</rdommin>
+            <rdommax>` + attr["rdommax"] + `</rdommax>
+            <attrunit>` + attr["units"] + `</attrunit>
           </rdom>
         </attrdomv>
       </attr>`
-//	}
-return xml
+	//	}
+	return xml
+}
+
+func getcurrentdataformat(records [][]string, firstlabel string, datefield int) string {
+	var format, sdate string
+	for i := range records {
+		if records[i][0] != firstlabel {
+			sdate = records[i][datefield] // + " " + records[i][timefield]
+			matched, err := regexp.MatchString("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]", sdate)
+			LogErr(err)
+			if matched == true {
+				//split the string by -
+				// grab the second set ie position 1
+				//are there any larger numbers than 12?
+				//yes than format is "2006-2-1"
+				//else if
+				// grab 3rd set pos 2
+				//are there any larger numbers than 12?
+				//yes than format is "2006-1-2"
+
+				format = "2006-1-2"
+
+			}
+			matched, err = regexp.MatchString("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]", sdate)
+			LogErr(err)
+			if matched == true {
+				format = "2006/1/2"
+
+			}
+			matched, err = regexp.MatchString("[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]", sdate)
+			LogErr(err)
+			if matched == true {
+				format = "1/2/2006"
+
+			}
+			matched, err = regexp.MatchString("[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]", sdate)
+			LogErr(err)
+			if matched == true {
+				format = "1-2-2006"
+
+			}
+
+			LogErr(err)
+
+			//     timeindex, err := time.Parse("1/2/2006 15:04:05", stime)
+			//   LogErr(err)
+			// observed := timeindex.Format("20060102T15:04:05")
+			// fmt.Println(observed)
+			//                                                      fmt.Println(records[i$
+		}
+	}
+
+	return format
 }
