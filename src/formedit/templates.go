@@ -185,7 +185,9 @@ body {
     {{.NOTES}}
 </div>
     <div class="form-group customborder">
-
+      <div class="col-sm-6">
+        <input type="hidden" class="form-control" name="id" value="{{.ID}}" readonly>
+      </div>
 
       <div class="row">
          <div class="col-lg-6 col-lg-offset-3 ">
@@ -422,6 +424,22 @@ body {
 
 
 <div class="panel-footer row"><!-- panel-footer -->
+
+<!--
+    <div class="text-center">
+        <div class="next">
+          <button type="submit" name="button" value="reject" class="btn btn-danger">
+              <span class="glyphicon glyphicon-chevron-left"></span>Reject
+          </button>
+          <button type="submit" name="button" value="note" class="btn btn-primary">
+              Note Only  <span class="glyphicon glyphicon-file"></span>
+          </button>
+          <button type="submit" name="button" value="accept" class="btn btn-success">
+              Accept<span class="glyphicon glyphicon-chevron-right"></span>
+          </button>
+        </div>
+    </div>-->
+
     <div class="col-xs-4 text-left">
         <div class="previous">
           <button type="submit" name="button" value="reject" class="btn btn-danger">
@@ -445,6 +463,8 @@ body {
           </button>
         </div>
     </div>
+
+
 </div>
 </div>
 

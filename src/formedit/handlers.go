@@ -247,14 +247,13 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		button := r.FormValue("button")
 		note := r.FormValue("note")
 		t := time.Now().Format("2006-01-02 15:04:05")
-
 		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button + "-" + host)
-
+                realname, _ := ContactFromUserID(username)
 		if button == "accept" || button == "reject" {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
 			SetBools(id, datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool)
-			SendMail(id, datasetname, firstname, t, note, stat, button, emailbool, emailpibool, host)
+			SendMail(id, datasetname, realname, t, note, stat, button, emailbool, emailpibool, host)
 		} else if button == "note" {
 			MakeNote(id, note, t, button, username)
 		}
@@ -687,6 +686,7 @@ func getCookieByName(cookie []*http.Cookie, name string) string {
 func isAuthorized(token string) (int, string) {
 	var username string
 	query := "SELECT name FROM users u INNER JOIN sessions s ON u.uid = s.uid WHERE s.sid = '" + token + "';"
+        fmt.Println(query)
 	rows, err := db.Query(query)
 	LogErr(err)
 	for rows.Next() {
