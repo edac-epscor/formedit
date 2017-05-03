@@ -772,6 +772,10 @@ func send(recipient string, subject string, firstname string, topmessage string,
 	pass := "fluhelk"
 	to := recipient
 	params := &maildict{USERFIRSTNAME: firstname, TOPMESSAGE: topmessage, BUTTONLINK: buttonlink, BUTTONTEXT: buttontext, NOTES: note}
+        fmt.Println("***************************************************************")
+        fmt.Println(params)
+        fmt.Println(firstname)
+       	fmt.Println("***************************************************************")
 	buf := new(bytes.Buffer)
 	t := template.New("mail")
 	t, err := t.Parse(MAIL)
@@ -837,8 +841,10 @@ func IDtoName(id string) string {
 }
 
 func ContactFromUserID(name string) (string, string) {
+        fmt.Println("name to lookup is " + name)
 	var realname, email string
 	query := `select realname.realname, users.mail from realname, users where users.uid=realname.uid and users.name='` + name + `';`
+        fmt.Println(query)
 	err := db.QueryRow(query).Scan(&realname, &email)
 	LogErr(err)
 	return realname, email
@@ -930,62 +936,66 @@ func SetBools(id string, datasetnamebool bool, firstnamebool bool, lastnamebool 
 
 func SendMail(id string, datasetname string, username string, t string, note string, status string, button string, emailbool bool, emailpibool bool, host string) {
 
-	var recipients, anote, buttonlink, buttontext, message, realname string
+	var recipients, anote, buttonlink, buttontext, message, realname, email string
 	if button == "accept" {
 		if status == "2" {
-			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for your inspection.`
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+			message = `Dataset ID "` + id + `, titled "` + datasetname + `" has passed inspection by ` + username + ` and is ready for your inspection.`
+			//anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Approved: `+ t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
-			buttontext = "Dataset:" + id
+			buttontext = "Click here to view and approve"
 
 			for _, recip := range strings.Fields(configf.Managers) {
-				realname, email := ContactFromUserID(recip)
+				realname, email = ContactFromUserID(recip)
 				recipients = recipients + `"` + realname + `" <` + email + `>, `
 			}
 
 		} else if status == "3" {
 
-			message = `Dataset ID: ` + id + ` has passed inspection by ` + username + ` and is ready for insertion into GSToRE.`
-
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+			message = `Dataset ID: ` + id + `, titled "` + datasetname + `" has passed inspection by ` + username + ` and is ready for insertion into GSToRE.`
+			//anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
+                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Approved: `+ t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
-			buttontext = "Dataset:" + id
-
+			//buttontext = "Dataset:" + id
+                        buttontext = "Click here to view and approve"
 			for _, recip := range strings.Fields(configf.Admins) {
-				realname, email := ContactFromUserID(recip)
+				realname, email = ContactFromUserID(recip)
 				recipients = recipients + realname + ` <` + email + `>, `
 			}
 
 		}
 	} else if button == "reject" {
 		if status == "2" {
-			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been flagged for edit and has had it status changed to "In Progress". Please log into reporting.nmepscor.org, correct any problems that were found, and resubmit for approval. Please feel free to reply to this e-mail with any questions or concerns.`
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-			buttonlink = "https://reporting.nmepscor.org/datasetentry"
-			buttontext = "DataSet Entry Form"
-			realname, email := ContactFromID(id)
+			message = `I am sorry to inform you that dataset id "` + id + `" titled "` + datasetname + `" has been rejected. </br> Please log into reporting.nmepscor.org and fix the items listed below in the "Notes" section then re-submit your dataset.`
+//			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
+			buttonlink = "https://reporting.nmepscor.org"
+			buttontext = "Click here to log in"
+			realname, email = ContactFromID(id)
 			recipients = recipients + realname + ` <` + email + `>`
 		} else if status == "3" {
 
-			message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by a manager and its status changed to "Submitted for Approval". Please see notes on further steps.`
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by ` + username + ` and its status changed to "Submitted for Approval". Please see notes on further steps.`
+                        //anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
-			buttontext = "Dataset:" + id
+			buttontext = "Click here to view and approve."
 
 			for _, recip := range strings.Fields(configf.Users) {
-				realname, email := ContactFromUserID(recip)
+				realname, email = ContactFromUserID(recip)
 				recipients = recipients + realname + ` <` + email + `>, `
 			}
 
 		} else if status == "4" {
 
 			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected and status set to "Approved". Please see notes for further steps.`
-			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+       //			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
-			buttontext = "Dataset:" + id
+			buttontext = "Click here to view and approve."
 
 			for _, recip := range strings.Fields(configf.Users) {
-				realname, email := ContactFromUserID(recip)
+				realname, email = ContactFromUserID(recip)
 				recipients = recipients + realname + ` <` + email + `>, `
 			}
 
@@ -993,7 +1003,7 @@ func SendMail(id string, datasetname string, username string, t string, note str
 	}
 	recipients = strings.TrimSuffix(recipients, ", ")
 	subject := "EPSCoR Data Review of " + datasetname
-	fmt.Println(recipients + " EPSCoR Data Review " + realname + " " + message + " " + buttonlink + " " + buttontext + " " + anote)
+	//fmt.Println(recipients + " EPSCoR Data Review " + realname + " " + message + " " + buttonlink + " " + buttontext + " " + anote)
 	send(recipients, subject, realname, message, buttonlink, buttontext, anote)
 }
 

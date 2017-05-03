@@ -425,7 +425,7 @@ body {
 
 <div class="panel-footer row"><!-- panel-footer -->
 
-<!--
+
     <div class="text-center">
         <div class="next">
           <button type="submit" name="button" value="reject" class="btn btn-danger">
@@ -438,9 +438,10 @@ body {
               Accept<span class="glyphicon glyphicon-chevron-right"></span>
           </button>
         </div>
-    </div>-->
+    </div>
 
-    <div class="col-xs-4 text-left">
+
+<!--    <div class="col-xs-4 text-left">
         <div class="previous">
           <button type="submit" name="button" value="reject" class="btn btn-danger">
               <span class="glyphicon glyphicon-chevron-left"></span>Reject
@@ -463,7 +464,7 @@ body {
           </button>
         </div>
     </div>
-
+-->
 
 </div>
 </div>
@@ -1062,14 +1063,15 @@ const MAIL string =`<!doctype html>
           border-color: #34495e !important; } }
 
 	.well {
-	  min-height: 20px;
-	  padding: 19px;
-	  margin-bottom: 20px;
+	  min-height: 0px;
+	  padding: 0px;
+	  margin-bottom: 0px;
 	  background-color: #e6e6e6;
 	  border: 1px solid #e3e3e3;
-	  border-radius: 4px;
+	  border-radius: 0px;
 	  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .05);
 	          box-shadow: inset 0 1px 1px rgba(0, 0, 0, .05);
+          border-bottom: none;
 	}
 
     </style>
@@ -1091,30 +1093,18 @@ const MAIL string =`<!doctype html>
                   <table border="0" cellpadding="0" cellspacing="0">
                     <tr>
 		    <td>
-                     <div class="well">
+                     <div class="well well-sm"style="padding: 0px;">
                       <img alt="Header Image" src="https://reporting.nmepscor.org/sites/all/modules/er/static/img/datareview.png" />
                      </div>
+                     <br>
+                     <br>
                         <p>Hello {{.USERFIRSTNAME}},</p>
                         <p>{{.TOPMESSAGE}}</p>
-                        <table border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
-                          <tbody>
-                            <tr>
-                              <td align="left">
-                                <table border="0" cellpadding="0" cellspacing="0">
-                                  <tbody>
-                                    <tr>
-                                      <td> <a href="{{.BUTTONLINK}}" target="_blank">{{.BUTTONTEXT}}</a> </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-<p>NOTE:</p>
-<div class="form-group customborder">
-                        <p>{{.NOTES}}</p>
-</div><br>
+
+                        <a href="{{.BUTTONLINK}}" target="_blank">{{.BUTTONTEXT}}</a><br><br>
+			<p>Notes:</p>
+                        {{.NOTES}}
+                        <p>Please feel free to reply to this e-mail with any questions or concerns.</p>
                         <p>Thank you in advance for your cooperation in this matter.</p>
                       </td>
                     </tr>
