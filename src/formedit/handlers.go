@@ -39,8 +39,9 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 		STATUS4   string
 		STATUS5   string
 		LOGO      string
+                NUMRECORDS string
 	}
-
+        var numrecords int
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		var body string
@@ -91,6 +92,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 					rows, err := formdb.Query(query)
 					LogErr(err)
 					for rows.Next() {
+                                                numrecords++
 						var id, datasetname, firstname, lastname, email, datecreated string
 						err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
 						body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-group-item-action"><span class="badge badge-default badge-pill">Dataset ID:` + id + `</span></p>Dataset Name: <strong>` + datasetname + `</strong></p>Submitted by: <strong>` + firstname + ` ` + lastname + `</p></strong>E-Mail:<strong>` + email + `  </p></strong><small class="text-muted">Dataset Created: ` + datecreated + `</small></a>`
@@ -106,7 +108,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
                                                  }
                                                  </style>`
 
-					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
+					params := &secretdict{BODY: body, STYLE: style, STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo, NUMRECORDS: strconv.Itoa(numrecords)}
 					t := template.New("test")
 					t, err = t.Parse(StarterTemplate)
 					LogErr(err)

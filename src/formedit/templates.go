@@ -86,6 +86,9 @@ body {
 
 
 <div class="container">
+ <div class="alert alert-info" style="text-align: center">
+  <strong>{{.NUMRECORDS}} records found.</strong>
+ </div>
 
 {{.BODY}}
 </div>
