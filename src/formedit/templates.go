@@ -19,8 +19,8 @@ const Bootstrap string = `<!DOCTYPE html>
   <script src="https://reporting.nmepscor.org/sites/all/modules/er/static/js/bootstrap.min.js"></script>
 <style>
 {{.STYLE}}
-body { 
-    padding-top: 65px; 
+body {
+    padding-top: 65px;
 }
 .navbar-brand {
   padding: 0px;
@@ -39,7 +39,44 @@ body {
 
 
 
+const InsertView2 string=`<html>
+<head>
+<script>
+function output(inp) {
+    document.body.appendChild(document.createElement('pre')).innerHTML = inp;
+}
 
+function syntaxHighlight(json) {
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        var cls = 'number';
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+                cls = 'key';
+            } else {
+                cls = 'string';
+            }
+        } else if (/true|false/.test(match)) {
+            cls = 'boolean';
+        } else if (/null/.test(match)) {
+            cls = 'null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+var obj = {a:1, 'b':'foo', c:[false,'false',null, 'null', {d:{e:1.3e5,f:'1.3e5'}}]};
+var str = JSON.stringify(obj, undefined, 4);
+
+//output(str);
+//output(syntaxHighlight(str));
+</script>
+</head>
+<body>
+
+</body>
+
+</html>`
 
 const StarterTemplate string =`<html>
 <head>
@@ -51,8 +88,8 @@ const StarterTemplate string =`<html>
   <script src="https://reporting.nmepscor.org/sites/all/modules/er/static/js/bootstrap.min.js"></script>
 
 <style>
-body { 
-    padding-top: 65px; 
+body {
+    padding-top: 65px;
 }
 .navbar-brand {
   padding: 0px;
@@ -120,7 +157,7 @@ const EditTemplate string = `<html>
 $('form').submit(function(){
 var valid = true;
   $('textarea[required]').each(function(i, el){
-    if(valid && $(el).val()=='' ) valid = false; 
+    if(valid && $(el).val()=='' ) valid = false;
   })
 
 return valid;
@@ -141,8 +178,8 @@ return valid;
   border-radius: 4px;
   padding: 20px;
 }
-body { 
-    padding-top: 65px; 
+body {
+    padding-top: 65px;
 }
 .navbar-brand {
   padding: 0px;
@@ -411,8 +448,9 @@ body {
     <div class="col-sm-4">
       <label><input type="checkbox" name=filedescriptionbool value=true {{.FILEDESCRIPTIONBOOL}}> Describes the data.</label>
     </div>
-
     </div>
+{{.FIELDS}}
+
   </div>
 
     <div class="form-group customborder">
@@ -444,36 +482,16 @@ body {
     </div>
 
 
-<!--    <div class="col-xs-4 text-left">
-        <div class="previous">
-          <button type="submit" name="button" value="reject" class="btn btn-danger">
-              <span class="glyphicon glyphicon-chevron-left"></span>Reject
-          </button>
-        </div>
-    </div>
 
-    <div class="col-xs-4 text-center">
-        <div class="next">
-          <button type="submit" name="button" value="note" class="btn btn-primary">
-              Note Only  <span class="glyphicon glyphicon-file"></span>
-          </button>
-        </div>
-    </div>
-
-    <div class="col-xs-4 text-right">
-        <div class="next">
-          <button type="submit" name="button" value="accept" class="btn btn-success">
-              Accept<span class="glyphicon glyphicon-chevron-right"></span>
-          </button>
-        </div>
-    </div>
--->
 
 </div>
 </div>
 
  </div>
 </form>
+<div class="text-center">
+{{.INSERTBUTTON}}
+</div>
 </div>
 </body>
 </html>`
@@ -775,11 +793,11 @@ const JSON string = `{
 }`
 
 /*params = &valuedict{
-COLLECTIONTITLE: collectiontitle, 
+COLLECTIONTITLE: collectiontitle,
 
-FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), 
+FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone),
 
-PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), 
+PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo),
 
 KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool)}
 */
@@ -809,7 +827,7 @@ const MAIL string =`<!doctype html>
         font-size: 14px;
         line-height: 1.4;
         margin: 0;
-        padding: 0; 
+        padding: 0;
         -ms-text-size-adjust: 100%;
         -webkit-text-size-adjust: 100%; }
 
@@ -1058,7 +1076,7 @@ const MAIL string =`<!doctype html>
           font-size: inherit !important;
           font-weight: inherit !important;
           line-height: inherit !important;
-          text-decoration: none !important; } 
+          text-decoration: none !important; }
         .btn-primary table td:hover {
           background-color: #34495e !important; }
         .btn-primary a:hover {

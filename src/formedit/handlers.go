@@ -7,10 +7,10 @@ import (
 	//	"io"
 	//	"encoding/json"
 	"encoding/csv"
-	"encoding/xml"
+	 "encoding/xml"
 	"fmt"
 	"github.com/gorilla/mux"
-	"io/ioutil"
+	// "io/ioutil"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -24,24 +24,25 @@ import (
 	//    "github.com/tealeg/xlsx"
 )
 
+
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
 	type secretdict struct {
-		BODY      string
-		STYLE     string
-		DISABLED1 string
-		DISABLED2 string
-		DISABLED3 string
-		DISABLED4 string
-		DISABLED5 string
-		STATUS1   string
-		STATUS2   string
-		STATUS3   string
-		STATUS4   string
-		STATUS5   string
-		LOGO      string
-                NUMRECORDS string
+		BODY       string
+		STYLE      string
+		DISABLED1  string
+		DISABLED2  string
+		DISABLED3  string
+		DISABLED4  string
+		DISABLED5  string
+		STATUS1    string
+		STATUS2    string
+		STATUS3    string
+		STATUS4    string
+		STATUS5    string
+		LOGO       string
+		NUMRECORDS string
 	}
-        var numrecords int
+	var numrecords int
 	token := getCookieByName(r.Cookies(), cookieid)
 	if token != "" {
 		var body string
@@ -92,7 +93,7 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 					rows, err := formdb.Query(query)
 					LogErr(err)
 					for rows.Next() {
-                                                numrecords++
+						numrecords++
 						var id, datasetname, firstname, lastname, email, datecreated string
 						err = rows.Scan(&id, &datasetname, &firstname, &lastname, &email, &datecreated)
 						body = body + `<a href="/formedit/edit?id=` + id + `" class="list-group-item list-group-item-action"><span class="badge badge-default badge-pill">Dataset ID:` + id + `</span></p>Dataset Name: <strong>` + datasetname + `</strong></p>Submitted by: <strong>` + firstname + ` ` + lastname + `</p></strong>E-Mail:<strong>` + email + `  </p></strong><small class="text-muted">Dataset Created: ` + datecreated + `</small></a>`
@@ -250,7 +251,7 @@ func SaveEdit(w http.ResponseWriter, r *http.Request) {
 		note := r.FormValue("note")
 		t := time.Now().Format("2006-01-02 15:04:05")
 		log.Println(id + " " + datasetname + " " + firstname + " " + lastname + " " + email + " " + phone + " " + firstnamepi + " " + lastnamepi + " " + emailpi + " " + phonepi + " " + collectiontitle + " " + categorytitle + " " + subcategorytitle + " " + purpose + " " + otherinfo + " " + keywords + " " + placenames + " " + filename + " " + filetype + " " + filedescription + " " + step + "#" + strconv.FormatBool(datasetnamebool) + "-" + strconv.FormatBool(firstnamebool) + "-" + strconv.FormatBool(lastnamebool) + "-" + strconv.FormatBool(emailbool) + "-" + strconv.FormatBool(phonebool) + "-" + strconv.FormatBool(firstnamepibool) + "-" + strconv.FormatBool(lastnamepibool) + "-" + strconv.FormatBool(emailpibool) + "-" + strconv.FormatBool(phonepibool) + "-" + strconv.FormatBool(collectiontitlebool) + "-" + strconv.FormatBool(categorytitlebool) + "-" + strconv.FormatBool(subcategorytitlebool) + "-" + strconv.FormatBool(purposebool) + "-" + strconv.FormatBool(otherinfobool) + "-" + strconv.FormatBool(keywordsbool) + "-" + strconv.FormatBool(placenamesbool) + "-" + strconv.FormatBool(filenamebool) + "-" + strconv.FormatBool(filetypebool) + "-" + strconv.FormatBool(filedescriptionbool) + "-" + note + "-" + button + "-" + host)
-                realname, _ := ContactFromUserID(username)
+		realname, _ := ContactFromUserID(username)
 		if button == "accept" || button == "reject" {
 			UpdateStatus(id, button, username)
 			MakeNote(id, note, t, button, username)
@@ -327,13 +328,16 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		DATABOOL             string
 		FILEDESCRIPTIONBOOL  string
 		LOGO                 string
-                SUBMITTERNAME        string
-                SUBMITTEREMAIL       string
-                DATECREATED          string
+		SUBMITTERNAME        string
+		SUBMITTEREMAIL       string
+		DATECREATED          string
+		FIELDS               string
+                INSERTBUTTON	     string
 	}
 
 	token := getCookieByName(r.Cookies(), cookieid)
 	auth, _ := isAuthorized(token)
+
 	if auth >= 1 {
 		var params *valuedict
 		t := template.New("edit")
@@ -358,7 +362,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			LogErr(err)
 		}
 
-		var id, datasetname, userid, status, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step, datecreated sql.NullString
+		var id, datasetname, userid, status, categorytitle, subcategorytitle, firstname, lastname, email, phone, firstnamepi, lastnamepi, emailpi, phonepi, abstract, purpose, otherinfo, keywords, placenames, filename, filetype, filedescription, step, datecreated, fieldinfofield, fieldinfodescription, fieldinfounits, fieldinfofrequency, fieldinfoaggregation, fieldinfonodata, fieldinfodommin, fieldinfodommax sql.NullString
 		collectionisworking := true
 		var data, collectiontest, query, collectiontitle string
 		var datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, abstractbool, databool bool
@@ -391,15 +395,37 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		rows, err = formdb.Query(query)
 		LogErr(err)
 		for rows.Next() {
+			//get the field info
+			fieldquery := `SELECT fieldinfo.field, fieldinfo.description, fieldinfo.units, fieldinfo.frequency, fieldinfo.aggregation, fieldinfo.nodata, fieldinfo.dommin, fieldinfo.dommax FROM fieldinfo WHERE fieldinfo.datasetid='` + ID + `';`
+			fieldrows, err := formdb.Query(fieldquery)
+			LogErr(err)
+			fieldbody := ""
+			fieldcount := 0
+			for fieldrows.Next() {
+				fieldcount++
+				err = fieldrows.Scan(&fieldinfofield, &fieldinfodescription, &fieldinfounits, &fieldinfofrequency, &fieldinfoaggregation, &fieldinfonodata, &fieldinfodommin, &fieldinfodommax)
+				LogErr(err)
+				fieldbody = fieldbody + `<tr><td>` + Null2String(fieldinfofield) + `</td><td>` + Null2String(fieldinfodescription) + `</td><td>` + Null2String(fieldinfounits) + `</td><td>` + Null2String(fieldinfofrequency) + `</td><td>` + Null2String(fieldinfoaggregation) + `</td><td>` + Null2String(fieldinfonodata) + `</td><td>` + Null2String(fieldinfodommin) + `</td><td>` + Null2String(fieldinfodommax) + `</td></tr>`
+
+				fmt.Println(Null2String(fieldinfofield) + ", " + Null2String(fieldinfodescription) + ", " + Null2String(fieldinfounits) + ", " + Null2String(fieldinfofrequency) + ", " + Null2String(fieldinfoaggregation) + ", " + Null2String(fieldinfonodata) + ", " + Null2String(fieldinfodommin) + ", " + Null2String(fieldinfodommax))
+			}
+			if fieldcount > 0 {
+				fieldbody = `<div class="form-group customborder"><div class="col-sm-12"><div class="container col-sm-12"><table class="table"><thead><tr><th>field</th><th>description</th><th>units</th><th>frequency</th><th>aggregation</th><th>nodata</th><th>dommin</th><th>dommax</th></tr></thead><tbody>` + fieldbody + `</tbody></table></div></div></div>`
+				fmt.Println(fieldbody)
+
+			} else {
+				fieldbody = `<div class="form-group customborder"><div class="col-sm-12"><div class="container col-sm-12 .text-center">No field data was submitted.</div></div></div>`
+
+			}
+			// fmt.Println(fieldbody)
 			query = `SELECT datasetnamebool, firstnamebool, lastnamebool, emailbool, phonebool, firstnamepibool, lastnamepibool, emailpibool, phonepibool, abstractbool, collectiontitlebool, categorytitlebool, subcategorytitlebool, purposebool, otherinfobool, keywordsbool, placenamesbool, filenamebool, filetypebool, filedescriptionbool, databool FROM checks where datasetid='` + ID + `';`
 			checkrows, err := formdb.Query(query)
 			LogErr(err)
 			for checkrows.Next() {
 				err = checkrows.Scan(&datasetnamebool, &firstnamebool, &lastnamebool, &emailbool, &phonebool, &firstnamepibool, &lastnamepibool, &emailpibool, &phonepibool, &abstractbool, &collectiontitlebool, &categorytitlebool, &subcategorytitlebool, &purposebool, &otherinfobool, &keywordsbool, &placenamesbool, &filenamebool, &filetypebool, &filedescriptionbool, &databool)
-
 				LogErr(err)
-
 			}
+
 			if collectionisworking {
 				err = rows.Scan(&id, &datasetname, &userid, &status, &collectiontitle, &categorytitle, &subcategorytitle, &firstname, &lastname, &email, &phone, &firstnamepi, &lastnamepi, &emailpi, &phonepi, &abstract, &purpose, &otherinfo, &keywords, &placenames, &filename, &filetype, &filedescription, &step, &datecreated)
 			} else {
@@ -407,7 +433,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 				collectiontitle = "INVALID COLLECTION TITLE!!!"
 			}
 			LogErr(err)
-                        submittername, submitteremail := ContactFromUserID(IDtoName(Null2String(userid)))
+			submittername, submitteremail := ContactFromUserID(IDtoName(Null2String(userid)))
 			if _, err := os.Stat("/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)); err == nil {
 				data = `<a href="/formedit/download/` + ID + `">Data Download</a>`
 			} else {
@@ -416,8 +442,14 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 
 				//<font color="blue"> in ` + "/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)</font>
 			}
+                        insertbutton:=""
+			if auth==4{
+			insertbutton=`<a class="btn btn-primary glyphicon glyphicon-import " href="/formedit//insertview/` + ID + `" role="button">Review and Insert</a>`
+			}else{
+			insertbutton="<a></a>"
+			}
 
-			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool), SUBMITTERNAME:submittername, SUBMITTEREMAIL:submitteremail, DATECREATED:Null2String(datecreated)}
+			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool), SUBMITTERNAME: submittername, SUBMITTEREMAIL: submitteremail, DATECREATED: Null2String(datecreated), FIELDS: fieldbody, INSERTBUTTON: insertbutton}
 
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
@@ -447,7 +479,7 @@ func Download(w http.ResponseWriter, r *http.Request) {
 		}
 		pathtofile := "/uploads/" + IDtoName(userid) + "/" + filename
 		attachment := `attachment; filename="` + filename + `"`
-		fmt.Println(attachment)
+		//fmt.Println(attachment)
 		w.Header().Set("Content-Disposition", attachment)
 		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 		w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
@@ -504,7 +536,7 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 	origepsg := "26913"
 	features := "1"
 	geomtype := "POLYGON"
-	records := "201" //<-this is the numbe of records?
+	records := "201" //<-this is the number of records?
 	geoform := "spreadsheet"
 
 	id := mux.Vars(r)["id"]
@@ -527,7 +559,7 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 			id := mux.Vars(r)["id"]
 			query = `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
 			err = formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
-			fmt.Println(filetype)
+			//fmt.Println(filetype)
 			if filetype == "*.csv" {
 				if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
 					f, _ := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
@@ -550,7 +582,7 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 							timefield = i
 						}
 					}
-					fmt.Println(getcurrentdataformat(records, firstlabel, datefield))
+					//fmt.Println(getcurrentdataformat(records, firstlabel, datefield))
 					for i := range records {
 						// Element count.
 
@@ -649,9 +681,11 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 				xmlbuf := new(bytes.Buffer)
 				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
 				err = xmlt.Execute(xmlbuf, params)
-				fmt.Println(xml.Marshal(xmlbuf.Bytes()))
+				//fmt.Println(xml.Marshal(xmlbuf.Bytes()))
+                                output, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
+                                fmt.Println(output)
 				if strings.EqualFold(post, "True") {
-					fmt.Println("Inserting")
+					//fmt.Println("Inserting")
 					req, err := http.NewRequest("POST", "http://129.24.63.66/gstore_v3/apps/energize/datasets", jsonbuf)
 					req.Header.Set("Content-Type", "application/json")
 					req.Header.Set("Accept-Encoding", "gzip, deflate")
@@ -662,10 +696,10 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 					}
 					defer resp.Body.Close()
 
-					fmt.Println("response Status:", resp.Status)
-					fmt.Println("response Headers:", resp.Header)
-					body, _ := ioutil.ReadAll(resp.Body)
-					fmt.Println("response Body:", string(body))
+					// fmt.Println("response Status:", resp.Status)
+					// fmt.Println("response Headers:", resp.Header)
+					// body, _ := ioutil.ReadAll(resp.Body)
+					// fmt.Println("response Body:", string(body))
 
 				}
 			}
@@ -688,7 +722,7 @@ func getCookieByName(cookie []*http.Cookie, name string) string {
 func isAuthorized(token string) (int, string) {
 	var username string
 	query := "SELECT name FROM users u INNER JOIN sessions s ON u.uid = s.uid WHERE s.sid = '" + token + "';"
-        fmt.Println(query)
+	// fmt.Println(query)
 	rows, err := db.Query(query)
 	LogErr(err)
 	for rows.Next() {
@@ -774,10 +808,10 @@ func send(recipient string, subject string, firstname string, topmessage string,
 	pass := "fluhelk"
 	to := recipient
 	params := &maildict{USERFIRSTNAME: firstname, TOPMESSAGE: topmessage, BUTTONLINK: buttonlink, BUTTONTEXT: buttontext, NOTES: note}
-        fmt.Println("***************************************************************")
-        fmt.Println(params)
-        fmt.Println(firstname)
-       	fmt.Println("***************************************************************")
+	// fmt.Println("***************************************************************")
+	// fmt.Println(params)
+	// fmt.Println(firstname)
+	// 	fmt.Println("***************************************************************")
 	buf := new(bytes.Buffer)
 	t := template.New("mail")
 	t, err := t.Parse(MAIL)
@@ -791,7 +825,7 @@ func send(recipient string, subject string, firstname string, topmessage string,
 		buf.String()
 	log.Println(msg)
 	toslc := strings.Split(to, ",")
-	fmt.Println(toslc[0])
+	// fmt.Println(toslc[0])
 	err = smtp.SendMail("edacmail.unm.edu:587",
 		smtp.PlainAuth("", from, pass, "edacmail.unm.edu"),
 		from, toslc, []byte(msg))
@@ -843,10 +877,10 @@ func IDtoName(id string) string {
 }
 
 func ContactFromUserID(name string) (string, string) {
-        fmt.Println("name to lookup is " + name)
+	// fmt.Println("name to lookup is " + name)
 	var realname, email string
 	query := `select realname.realname, users.mail from realname, users where users.uid=realname.uid and users.name='` + name + `';`
-        fmt.Println(query)
+	// fmt.Println(query)
 	err := db.QueryRow(query).Scan(&realname, &email)
 	LogErr(err)
 	return realname, email
@@ -943,7 +977,7 @@ func SendMail(id string, datasetname string, username string, t string, note str
 		if status == "2" {
 			message = `Dataset ID "` + id + `, titled "` + datasetname + `" has passed inspection by ` + username + ` and is ready for your inspection.`
 			//anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
-                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Approved: `+ t + `</h5></font></p><br><br>`
+			anote = `<p class="lead">` + note + `<font color="grey"><h5>Approved: ` + t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			buttontext = "Click here to view and approve"
 
@@ -956,10 +990,10 @@ func SendMail(id string, datasetname string, username string, t string, note str
 
 			message = `Dataset ID: ` + id + `, titled "` + datasetname + `" has passed inspection by ` + username + ` and is ready for insertion into GSToRE.`
 			//anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="green">` + button + `</font></p></div>`
-                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Approved: `+ t + `</h5></font></p><br><br>`
+			anote = `<p class="lead">` + note + `<font color="grey"><h5>Approved: ` + t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			//buttontext = "Dataset:" + id
-                        buttontext = "Click here to view and approve"
+			buttontext = "Click here to view and approve"
 			for _, recip := range strings.Fields(configf.Admins) {
 				realname, email = ContactFromUserID(recip)
 				recipients = recipients + realname + ` <` + email + `>, `
@@ -969,8 +1003,8 @@ func SendMail(id string, datasetname string, username string, t string, note str
 	} else if button == "reject" {
 		if status == "2" {
 			message = `I am sorry to inform you that dataset id "` + id + `" titled "` + datasetname + `" has been rejected. </br> Please log into reporting.nmepscor.org and fix the items listed below in the "Notes" section then re-submit your dataset.`
-//			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
+			//			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			anote = `<p class="lead">` + note + `<font color="grey"><h5>Date Rejected ` + t + `</h5></font></p><br><br>`
 			buttonlink = "https://reporting.nmepscor.org"
 			buttontext = "Click here to log in"
 			realname, email = ContactFromID(id)
@@ -978,8 +1012,8 @@ func SendMail(id string, datasetname string, username string, t string, note str
 		} else if status == "3" {
 
 			message = `Dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected by ` + username + ` and its status changed to "Submitted for Approval". Please see notes on further steps.`
-                        //anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
+			//anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			anote = `<p class="lead">` + note + `<font color="grey"><h5>Date Rejected ` + t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			buttontext = "Click here to view and approve."
 
@@ -991,8 +1025,8 @@ func SendMail(id string, datasetname string, username string, t string, note str
 		} else if status == "4" {
 
 			message = `I am sorry to inform you that dataset id: "` + id + `" with dataset name: "` + datasetname + `" has been rejected and status set to "Approved". Please see notes for further steps.`
-       //			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
-                        anote = `<p class="lead">`+ note + `<font color="grey"><h5>Date Rejected `+ t + `</h5></font></p><br><br>`
+			//			anote = `<div class="well"><p class="lead"><font color="grey"><h5>` + username + ` ` + t + `: </h5></font>` + note + `<br><br>Decision:<font color="red">Correction Required</font></p></div>`
+			anote = `<p class="lead">` + note + `<font color="grey"><h5>Date Rejected ` + t + `</h5></font></p><br><br>`
 			buttonlink = `https://` + host + `/formedit/edit?id=` + id
 			buttontext = "Click here to view and approve."
 
@@ -1018,7 +1052,7 @@ func MakeAddr(addr sql.NullString, newaddr string) string {
 }
 
 func NormalizeAttributes(attr map[string]string) map[string]string {
-	fmt.Println(attr["attrdefs"])
+	// fmt.Println(attr["attrdefs"])
 
 	if len(attr["rdommin"]) == 0 {
 		attr["rdommin"] = "NA"
@@ -1124,3 +1158,4 @@ func getcurrentdataformat(records [][]string, firstlabel string, datefield int) 
 
 	return format
 }
+
