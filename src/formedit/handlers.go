@@ -7,7 +7,7 @@ import (
 	//	"io"
 	//	"encoding/json"
 	"encoding/csv"
-	 "encoding/xml"
+//	 "encoding/xml"
 	"fmt"
 	"github.com/gorilla/mux"
 	// "io/ioutil"
@@ -21,6 +21,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"html"
 	//    "github.com/tealeg/xlsx"
 )
 
@@ -450,7 +451,6 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 			}
 
 			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool), SUBMITTERNAME: submittername, SUBMITTEREMAIL: submitteremail, DATECREATED: Null2String(datecreated), FIELDS: fieldbody, INSERTBUTTON: insertbutton}
-
 			t, err = t.Parse(EditTemplate)
 			LogErr(err)
 		}
@@ -488,6 +488,12 @@ func Download(w http.ResponseWriter, r *http.Request) {
 }
 
 func InsertView(w http.ResponseWriter, r *http.Request) {
+
+	type jsonstring struct {
+		JSONSTR string
+		XMLSTR	string
+	}
+
 	type jsondict struct {
 		DATASETNAME      string
 		UPLOADUSER       string
@@ -624,7 +630,7 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 
 			} else {
 				//fmt.Println("Not a csv")
-
+//InsertViewTPL
 				//			LogErr(err)
 
 				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
@@ -671,19 +677,44 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
 
 				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
-
+                                xmlbuf := new(bytes.Buffer)
+                                xt := template.Must(template.New("xml").Parse(GSTOREXML))
+                                err = xt.Execute(xmlbuf, params)
+                                LogErr(err)
+                                xmlstring:=string(xmlbuf.Bytes())
+                                xmlstringstring:=strings.Replace(xmlstring,"\n","\\n",-1)
+                                xmlstringstring=strings.Replace(xmlstringstring,"\t","\\t",-1)
+                                jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
 				jsonbuf := new(bytes.Buffer)
+//				xmlbuf := new(bytes.Buffer)
 				jt := template.Must(template.New("json").Parse(JSON))
-				err = jt.Execute(jsonbuf, params)
-				LogErr(err)
-				w.Header().Set("Content-Type", "application/json")
-				w.Write(jsonbuf.Bytes())
-				xmlbuf := new(bytes.Buffer)
-				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
-				err = xmlt.Execute(xmlbuf, params)
+//                                xt := template.Must(template.New("xml").Parse(GSTOREXML))
+				err = jt.Execute(jsonbuf, jsonparams)
+                                LogErr(err)
+//                                err = xt.Execute(xmlbuf, params)
+//				LogErr(err)
+				w.Header().Set("Content-Type", "text/html")
+				//w.Write(jsonbuf.Bytes())
+                                jbufstring:=string(jsonbuf.Bytes())
+                                //xmlstring:=string(xmlbuf.Bytes())
+                                //xmloutput, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
+				fmt.Println(jbufstring)
+                                jsonparam := &jsonstring{JSONSTR:jbufstring, XMLSTR:html.EscapeString(xmlstring)}
+                                t := template.New("insert")
+                        	t, err = t.Parse(InsertViewTPL)
+                        	LogErr(err)
+                		err = t.Execute(w,jsonparam)
+
+
+
+				//xmlbuf := new(bytes.Buffer)
+//				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
+//				err = xmlt.Execute(xmlbuf, params)
 				//fmt.Println(xml.Marshal(xmlbuf.Bytes()))
-                                output, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
-                                fmt.Println(output)
+  //                              output, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
+    //                            fmt.Println(output)
+
+
 				if strings.EqualFold(post, "True") {
 					//fmt.Println("Inserting")
 					req, err := http.NewRequest("POST", "http://129.24.63.66/gstore_v3/apps/energize/datasets", jsonbuf)
