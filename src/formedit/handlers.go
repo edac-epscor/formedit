@@ -7,10 +7,11 @@ import (
 	//	"io"
 	//	"encoding/json"
 	"encoding/csv"
-//	 "encoding/xml"
+	//		 "encoding/xml"
 	"fmt"
 	"github.com/gorilla/mux"
-	// "io/ioutil"
+	"html"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -21,10 +22,12 @@ import (
 	"strings"
 	"text/template"
 	"time"
-	"html"
 	//    "github.com/tealeg/xlsx"
+	"encoding/json"
+	"github.com/extrame/xls"
+	//	"reflect"
+	"sort"
 )
-
 
 func SimpleForm(w http.ResponseWriter, r *http.Request) {
 	type secretdict struct {
@@ -333,7 +336,7 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 		SUBMITTEREMAIL       string
 		DATECREATED          string
 		FIELDS               string
-                INSERTBUTTON	     string
+		INSERTBUTTON         string
 	}
 
 	token := getCookieByName(r.Cookies(), cookieid)
@@ -443,11 +446,14 @@ func SimpleEdit(w http.ResponseWriter, r *http.Request) {
 
 				//<font color="blue"> in ` + "/uploads/" + IDtoName(Null2String(userid)) + "/" + Null2String(filename)</font>
 			}
-                        insertbutton:=""
-			if auth==4{
-			insertbutton=`<a class="btn btn-primary glyphicon glyphicon-import " href="/formedit//insertview/` + ID + `" role="button">Review and Insert</a>`
-			}else{
-			insertbutton="<a></a>"
+			insertbutton := ""
+			if auth == 4 && Null2String(status) == "4" {
+				//insertbutton = `<a class="btn btn-primary glyphicon glyphicon-import " href="/formedit//insertview/` + ID + `" role="button">Review and Insert as a file</a><br><a class="btn btn-primary glyphicon glyphicon-import " href="/formedit/tableinsertview/` + ID + `" role="button">Review and Insert as a table</a>`
+				insertbutton = `<div class="text-center"><div><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit//insertview/` + ID + `" role="button">Insert File</a><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit/tableinsertview/` + ID + `" role="button">Insert Table</a></div></div>`
+
+				fmt.Println(Null2String(status))
+			} else {
+				insertbutton = "<a></a>"
 			}
 
 			params = &valuedict{ID: Null2String(id), DATASETNAME: Null2String(datasetname), COLLECTIONTITLE: collectiontitle, CATEGORYTITLE: Null2String(categorytitle), SUBCATEGORYTITLE: Null2String(subcategorytitle), FIRSTNAME: Null2String(firstname), LASTNAME: Null2String(lastname), EMAIL: Null2String(email), PHONE: Null2String(phone), FIRSTNAMEPI: Null2String(firstnamepi), LASTNAMEPI: Null2String(lastnamepi), EMAILPI: Null2String(emailpi), PHONEPI: Null2String(phonepi), ABSTRACT: Null2String(abstract), PURPOSE: Null2String(purpose), OTHERINFO: Null2String(otherinfo), KEYWORDS: Null2String(keywords), PLACENAMES: Null2String(placenames), FILENAME: Null2String(filename), FILETYPE: Null2String(filetype), FILEDESCRIPTION: Null2String(filedescription), STEP: Null2String(step), STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], NOTES: notes, DATASETNAMEBOOL: ischecked(datasetnamebool), FIRSTNAMEBOOL: ischecked(firstnamebool), LASTNAMEBOOL: ischecked(lastnamebool), EMAILBOOL: ischecked(emailbool), PHONEBOOL: ischecked(phonebool), FIRSTNAMEPIBOOL: ischecked(firstnamepibool), LASTNAMEPIBOOL: ischecked(lastnamepibool), EMAILPIBOOL: ischecked(emailpibool), PHONEPIBOOL: ischecked(phonepibool), ABSTRACTBOOL: ischecked(abstractbool), COLLECTIONTITLEBOOL: ischecked(collectiontitlebool), CATEGORYTITLEBOOL: ischecked(categorytitlebool), SUBCATEGORYTITLEBOOL: ischecked(subcategorytitlebool), PURPOSEBOOL: ischecked(purposebool), OTHERINFOBOOL: ischecked(otherinfobool), KEYWORDSBOOL: ischecked(keywordsbool), PLACENAMESBOOL: ischecked(placenamesbool), FILENAMEBOOL: ischecked(filenamebool), FILETYPEBOOL: ischecked(filetypebool), FILEDESCRIPTIONBOOL: ischecked(filedescriptionbool), LOGO: Logo, DATA: data, DATABOOL: ischecked(databool), SUBMITTERNAME: submittername, SUBMITTEREMAIL: submitteremail, DATECREATED: Null2String(datecreated), FIELDS: fieldbody, INSERTBUTTON: insertbutton}
@@ -487,11 +493,570 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//////////////////////////////////////////////////////////////////////
+
+func TableInsertView(w http.ResponseWriter, r *http.Request) {
+
+	type Attributes struct {
+		Name string `json:"name"`
+		UUID string `json:"uuid"`
+	}
+
+	type AttributesJSONDoc struct {
+		Attributes []Attributes `json:"attributes"`
+	}
+
+	type Atts struct {
+		U    string `json:"u"`
+		Name string `json:"name"`
+		Val  string `json:"val"`
+	}
+	type Records struct {
+		Observed string `json:"observed"`
+		Rid      string `json:"rid"`
+		Atts     []Atts `json:"atts"`
+	}
+
+	type RecordsJSONDoc struct {
+		Records []Records `json:"records"`
+		Rids    []string  `json:"rids"`
+	}
+
+	type Fields struct {
+		OgrWidth    int    `json:"ogr_width,omitempty"`
+		OrigName    string `json:"orig_name,omitempty"`
+		Nodata      string `json:"nodata,omitempty"`
+		Name        string `json:"name,omitempty"`
+		OgrType     int    `json:"ogr_type"`
+		Description string `json:"description,omitempty"`
+	}
+
+	type FieldsJSONDoc struct {
+		Fields  []Fields `json:"fields,omitempty"`
+		Dataset string   `json:"dataset,omitempty"`
+	}
+
+	mime := map[string]string{
+		"xls":  "application/vnd.ms-excel",
+		"xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"csv":  "text/csv",
+	}
+
+	type jsonstring struct {
+		JSONSTR string
+		XMLSTR  string
+		INSERTBUTTON string
+	}
+
+
+        type inserteddict struct {
+                ID string
+        }
+
+	type jsondict struct {
+		DATASETNAME      string
+		UPLOADUSER       string
+		FILENAME         string
+		FIRSTNAMEPI      string
+		LASTNAMEPI       string
+		CATEGORYTITLE    string
+		SUBCATEGORYTITLE string
+		RAWXML           string
+		BASENAME         string
+		ISEMBARGOED      string
+		RELEASEDATE      string
+		ORIGEPSG         string
+		FEATURES         string
+		GEOMTYPE         string
+		RECORDS          string
+		EPSG             string
+		WESTBC           string
+		EASTBC           string
+		NORTHBC          string
+		SOUTHBC          string
+		EXTENSION        string
+		MIMETYPE         string
+		DATAONEARCHIVE   string
+		GROUPNAME        string
+		COLLECTIONTITLE  string
+		ABSTRACT         string
+		ADDRESS          string
+		CITY             string
+		COLLECTIONNAME   string
+		TITLE            string
+		EMAILPI          string
+		PHONEPI          string
+		PURPOSE          string
+		STATE            string
+		ZIP              string
+		GEOFORM          string
+		ATTRIBUTES       string
+	}
+
+	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, rawxml, userid, filename, basename, isembargoed, releasedate, lat, lon, westbc, eastbc, northbc, southbc, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi, attributes string
+	var releasedatenull, address1, address2, address3 sql.NullString
+
+	epsg := "4326"
+	origepsg := "26913"
+	features := "1"
+	geomtype := "POLYGON"
+	records := "201" //<-this is the number of records?
+	geoform := "spreadsheet"
+	//used mutliple times down below to replace spaces and whatnot in orginame
+	replace_orig := strings.NewReplacer(" ", "_",
+		"(", "",
+		"-", "_",
+		"\\", "_",
+		"/", "_",
+		")", "")
+
+	id := mux.Vars(r)["id"]
+	post := r.URL.Query().Get("post")
+	token := getCookieByName(r.Cookies(), cookieid)
+	var attributejson []uint8
+	Fields2B := &FieldsJSONDoc{}
+	if token != "" {
+		tabledata := make(map[string][]string)
+		auth, username := isAuthorized(token)
+		var maxrows int
+		if auth >= 3 {
+			query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
+			err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
+			if Null2String(releasedatenull) == "NULL" {
+				isembargoed = "False"
+				releasedate = string(time.Now().Format("2006-01-02"))
+			} else {
+				isembargoed = "True"
+				releasedate = Null2String(releasedatenull)
+			}
+			LogErr(err)
+
+			id := mux.Vars(r)["id"]
+			query = `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
+			err = formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
+			if filetype == "*.csv" {
+				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
+				if uploadtodataone == "Yes" {
+					dataonearchive = "True"
+				} else if uploadtodataone == "No" {
+					dataonearchive = "False"
+				}
+				westbc = lon
+				eastbc = lon
+				northbc = lat
+				southbc = lat
+				uploaduser = IDtoName(userid)
+				extension := strings.TrimPrefix(filetype, "*.")
+				mimetype := mime[extension]
+				//fmt.Println(mimetype)
+				var address string
+				address = MakeAddr(address1, address)
+				address = MakeAddr(address2, address)
+				address = MakeAddr(address3, address)
+				query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+				rows, err := formdb.Query(query)
+				LogErr(err)
+				piname := firstnamepi + ` ` + lastnamepi
+				for rows.Next() {
+					var field, description, units, frequency, aggregation, nodata, dommin, dommax string
+					err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
+					attributemap := map[string]string{
+						"field":       field,
+						"description": description,
+						"units":       units,
+						"frequency":   frequency,
+						"aggregation": aggregation,
+						"nodata":      nodata,
+						"dommin":      dommin,
+						"dommax":      dommax,
+						"attrdefs":    piname,
+					}
+
+					attributemap = NormalizeAttributes(attributemap)
+
+					attributes = attributes + BuildAttributes(attributemap)
+				}
+				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
+				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				xmlbuf := new(bytes.Buffer)
+				xt := template.Must(template.New("xml").Parse(GSTORETABLEXML))
+				err = xt.Execute(xmlbuf, params)
+				LogErr(err)
+				xmlstring := string(xmlbuf.Bytes())
+				xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
+				xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+				if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
+					f, _ := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
+
+					csvr := csv.NewReader(bufio.NewReader(f))
+					records, err := csvr.ReadAll()
+					LogErr(err)
+					firstlabel := records[0][0]
+
+					alllabels := records[0]
+					var datefield, timefield int
+					for i := 0; i < len(alllabels); i += 1 {
+						lab := alllabels[i]
+						if strings.ToLower(lab) == "date" {
+							datefield = i
+						}
+						if strings.ToLower(lab) == "time" {
+							timefield = i
+						}
+					}
+					for i := range records {
+						if records[i][0] != firstlabel {
+
+							var stime string
+							stime = records[i][datefield] + " " + records[i][timefield]
+							timeindex, err := time.Parse("1/2/2006 15:04:05", stime)
+							LogErr(err)
+							observed := timeindex.Format("20060102T15:04:05")
+							_ = observed
+						}
+					}
+				}
+
+				jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				jsonbuf := new(bytes.Buffer)
+				jt := template.Must(template.New("json").Parse(TABLEJSON))
+				err = jt.Execute(jsonbuf, jsonparams)
+				LogErr(err)
+				w.Header().Set("Content-Type", "text/html")
+				jbufstring := string(jsonbuf.Bytes())
+				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring)}
+				t := template.New("insert")
+				t, err = t.Parse(InsertViewTPL)
+				LogErr(err)
+				err = t.Execute(w, jsonparam)
+
+				if strings.EqualFold(post, "True") {
+					req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept-Encoding", "gzip, deflate")
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						panic(err)
+					}
+					defer resp.Body.Close()
+				}
+
+			} else {
+
+				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
+				if uploadtodataone == "Yes" {
+					dataonearchive = "True"
+				} else if uploadtodataone == "No" {
+					dataonearchive = "False"
+				}
+				westbc = lon
+				eastbc = lon
+				northbc = lat
+				southbc = lat
+				uploaduser = IDtoName(userid)
+				extension := strings.TrimPrefix(filetype, "*.")
+				mimetype := mime[extension]
+				var address string
+				address = MakeAddr(address1, address)
+				address = MakeAddr(address2, address)
+				address = MakeAddr(address3, address)
+				query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+				rows, err := formdb.Query(query)
+				LogErr(err)
+				piname := firstnamepi + ` ` + lastnamepi
+				for rows.Next() {
+					var field, description, units, frequency, aggregation, nodata, dommin, dommax string
+					err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
+					attributemap := map[string]string{
+						"field":       field,
+						"description": description,
+						"units":       units,
+						"frequency":   frequency,
+						"aggregation": aggregation,
+						"nodata":      nodata,
+						"dommin":      dommin,
+						"dommax":      dommax,
+						"attrdefs":    piname,
+					}
+
+					attributemap = NormalizeAttributes(attributemap)
+
+					attributes = attributes + BuildAttributes(attributemap)
+				}
+
+				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
+
+				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				xmlbuf := new(bytes.Buffer)
+				xt := template.Must(template.New("xml").Parse(GSTORETABLEXML))
+				err = xt.Execute(xmlbuf, params)
+				LogErr(err)
+				xmlstring := string(xmlbuf.Bytes())
+				xmlstringstring := strconv.QuoteToASCII(xmlstring)
+				xmlstringstring = strings.Replace(xmlstring, "\n", "\\n", -1)
+				xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+				datefieldfound := false
+				timefieldfound := false
+				var nodata string
+				var datefield, timefield string
+				if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
+					xlsfile := "/uploads/" + IDtoName(userid) + "/" + filename
+					if xlFile, err := xls.Open(xlsfile, "utf-8"); err == nil {
+						Fields2B2 := &FieldsJSONDoc{}
+						if sheet1 := xlFile.GetSheet(0); sheet1 != nil {
+
+							/*
+							   	var datefield, timefield int
+							   	for i := 0; i < len(alllabels); i += 1 {
+							           	lab := alllabels[i]
+							           	if strings.ToLower(lab) == "date" {
+							                   	datefield = i
+							           	}
+							           	if strings.ToLower(lab) == "time" {
+							                   	timefield = i
+							           	}
+							   	}
+							   	for i := range records {
+							            if records[i][0] != firstlabel {
+
+							                    var stime string
+							                    stime = records[i][datefield] + " " + records[i][timefield]
+							                   	timeindex, err := time.Parse("1/2/2006 15:04:05", stime)
+							                   	LogErr(err)
+							                   	observed := timeindex.Format("20060102T15:04:05")
+							                   	_ = observed
+							            }
+							   	}
+
+							*/
+
+							title := "xxxx"
+							titlecount := 0
+							for title != "" {
+								title = strings.TrimSpace(sheet1.Row(0).Col(titlecount))
+								if title != "" {
+									//strings.Replace(xmlstring, "\n", "\\n", -1)
+									//fmt.Println(strings.ToLower(title))
+									if strings.Contains(strings.ToLower(title), "date") {
+										datefieldfound = true
+										datefield = title
+									}
+									if strings.Contains(strings.ToLower(title), "time") {
+										timefieldfound = true
+										timefield = title
+									}
+									var fd, nd sql.NullString
+									var fielddesc string
+									query := `SELECT description, nodata from fieldinfo where datasetid='` + id + `'AND field='` + title + `';`
+									err := formdb.QueryRow(query).Scan(&fd, &nd)
+									LogErr(err)
+									var ogrlist []string
+
+									if Null2String(fd) == "NULL" {
+										fielddesc = "NODESCRIPTION"
+									} else {
+										fielddesc = Null2String(fd)
+									}
+
+									ogrwidth := 1
+									maxrows = int(sheet1.MaxRow)
+									for i := 0; i <= (int(sheet1.MaxRow)); i++ {
+										olength := len(sheet1.Row(i).Col(titlecount))
+										ogrlist = append(ogrlist, strings.TrimSpace(sheet1.Row(i).Col(titlecount)))
+										if ogrwidth < olength {
+											ogrwidth = olength
+										}
+									}
+									if Null2String(nd) == "NULL" || Null2String(nd) == "N/A" {
+										nodata = ""
+									} else {
+										nodata = Null2String(nd)
+									}
+									//strings.Replace(xmlstring, "\n", "\\n", -1)
+									ogrtype := FindOGRType(ogrlist, nodata)
+									fmt.Println("##################################")
+									fmt.Println(ogrlist)
+									//name := strings.ToLower(replace_orig.Replace(title))
+									name := strings.ToLower(replace_orig.Replace(strings.Replace(title, "\n", "\\n", -1)))
+									fmt.Println(name)
+									tabledata[name] = ogrlist
+									fmt.Println(tabledata)
+									fmt.Println("##################################")
+									Fields2B.Fields = append(Fields2B.Fields, Fields{OrigName: title, Name: name, OgrWidth: ogrwidth, Description: fielddesc, Nodata: nodata, OgrType: ogrtype})
+									Fields2B2.Fields = append(Fields2B2.Fields, Fields{OrigName: title, Name: name, OgrWidth: ogrwidth})
+
+								}
+								titlecount++
+							}
+
+						}
+
+					}
+				}
+				temporalfield := ""
+				if datefieldfound && timefieldfound {
+					fmt.Println("Use " + datefield + " for date and " + timefield + "for time")
+				} else if datefieldfound {
+					fmt.Println("Use " + datefield)
+				} else if timefieldfound {
+					fmt.Println("Use " + timefield)
+					temporalfield = timefield
+				} else {
+					fmt.Println("dates don't matter!!!")
+				}
+
+				jsonparams := &jsondict{DATASETNAME: strings.Replace(datasetname,"_"," ", -1), UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				jsonbuf := new(bytes.Buffer)
+				jt := template.Must(template.New("json").Parse(TABLEJSON))
+				err = jt.Execute(jsonbuf, jsonparams)
+				LogErr(err)
+				w.Header().Set("Content-Type", "text/html")
+				jbufstring := string(jsonbuf.Bytes())
+				//fmt.Println(jbufstring)
+
+				insertbutton := `<div class="text-center"><div><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit/tableinsertview/` + id + `?post=true" role="button">Insert</a></div></div>`
+				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring), INSERTBUTTON:insertbutton}
+				t := template.New("insert")
+				t, err = t.Parse(InsertViewTPL)
+				LogErr(err)
+if strings.EqualFold(post, "True") {
+fmt.Println("inserting")
+}else{
+				err = t.Execute(w, jsonparam)
+}
+				//fmt.Println(reflect.TypeOf(jsonbuf))
+				//fmt.Println(tabledata)
+				attrmap := make(map[string]string)
+				if strings.EqualFold(post, "True") {
+					req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept-Encoding", "gzip, deflate")
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						panic(err)
+					}
+					defer resp.Body.Close()
+
+					//fmt.Println("response Status:", resp.Status)
+					//fmt.Println("response Headers:", resp.Header)
+					body, _ := ioutil.ReadAll(resp.Body)
+					fmt.Println("response Body:", string(body))
+					datasetuuid := string(body)
+					ATTURL := "http://" + configf.GSToREIP + "/gstore_v3/apps/energize/datasets/" + datasetuuid + "/attributes"
+					Fields2B.Dataset = datasetuuid
+					attributejson, _ = json.Marshal(Fields2B)
+					fmt.Println(string(attributejson))
+					if resp.StatusCode == 200 {
+						b := bytes.NewBuffer(attributejson)
+						req, err := http.NewRequest("POST", ATTURL, b)
+						req.Header.Set("Content-Type", "application/json")
+						req.Header.Set("Accept-Encoding", "gzip, deflate")
+						client := &http.Client{}
+						resp, err := client.Do(req)
+						if err != nil {
+							panic(err)
+						}
+						defer resp.Body.Close()
+						fmt.Println("response Status:", resp.Status)
+						fmt.Println("response Headers:", resp.Header)
+						body, _ := ioutil.ReadAll(resp.Body)
+						fmt.Println("response Body:", string(body))
+
+						res := AttributesJSONDoc{}
+						json.Unmarshal([]byte(body), &res)
+						fmt.Println(res)
+						for _, value := range res.Attributes {
+							attrmap[value.Name] = value.UUID
+						}
+
+						records := RecordsJSONDoc{}
+						recordID:=0
+						for rowcount := 1; rowcount < maxrows; rowcount++ {
+							recordID++
+							fmt.Println(rowcount)
+							atts := Atts{}
+							record := Records{}
+
+							var keys []string
+							for k := range tabledata {
+								keys = append(keys, k)
+							}
+							sort.Strings(keys)
+							fmt.Println(keys)
+							for _, key := range keys {
+								column := tabledata[key]
+								atts.Name = key
+								//if column[rowcount]==""||column[rowcount]==nodata{
+								//atts.Val ="NODATA"
+								//}else{
+								atts.Val = column[rowcount]
+								//}
+								atts.U = attrmap[key]
+								record.Atts = append(record.Atts, atts)
+								if key == strings.ToLower(replace_orig.Replace(temporalfield)) {
+									timeindex, err := time.Parse("1/2/2006 15:04:05 PM", column[rowcount])
+									LogErr(err)
+									observed := timeindex.Format("20060102T15:04:05")
+									record.Observed = observed
+
+								}
+								record.Rid = strconv.Itoa(recordID)
+
+							}
+
+							records.Records = append(records.Records, record)
+
+						}
+						records.Rids = append(records.Rids, "1")
+						recordsjson, _ := json.Marshal(records)
+						fmt.Println(string(recordsjson))
+
+						FEATURATTSURL := `http://` + configf.GSToREIP + `/gstore_v3/apps/epscor/datasets/` + datasetuuid + `/featureattributes`
+
+						if resp.StatusCode == 200 {
+							b := bytes.NewBuffer(recordsjson)
+							req, err := http.NewRequest("POST", FEATURATTSURL, b)
+							req.Header.Set("Content-Type", "application/json")
+							req.Header.Set("Accept-Encoding", "gzip, deflate")
+							client := &http.Client{}
+							resp, err := client.Do(req)
+							if err != nil {
+								panic(err)
+							}
+							defer resp.Body.Close()
+							fmt.Println("response Status:", resp.Status)
+							fmt.Println("response Headers:", resp.Header)
+							body, _ := ioutil.ReadAll(resp.Body)
+							fmt.Println("response Body:", string(body))
+							UpdateStatus(id, "accept", username)
+
+                                detparams := &inserteddict{ID: id}
+                                d := template.New("inserted")
+                                d, err = d.Parse(INSERTED)
+                                LogErr(err)
+                                err = d.Execute(w, detparams)
+
+
+
+						}
+
+					}
+				}
+			}
+
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+
 func InsertView(w http.ResponseWriter, r *http.Request) {
 
 	type jsonstring struct {
 		JSONSTR string
-		XMLSTR	string
+		XMLSTR  string
 	}
 
 	type jsondict struct {
@@ -565,8 +1130,59 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 			id := mux.Vars(r)["id"]
 			query = `SELECT datasets.userid, datasets.filename, datasets.filetype, datasets.datasetname, institutions.latitude, institutions.longitude, datasets.uploadtodataone, datasets.firstnamepi, datasets.lastnamepi, categorys.categorytitle, subcategorys.subcategorytitle, institutions.instName_short, collections.collectiontitle, datasets.abstract, datasets.purpose, institutions.address_1, institutions.address_2, institutions.address_3, institutions.city, institutions.state, institutions.zipcode, datasets.phonepi, datasets.emailpi FROM datasets, institutions, categorys, subcategorys, collections WHERE datasets.institutionid=institutions.id AND datasets.categoryid=categorys.id AND datasets.subcategoryid=subcategorys.id AND datasets.collectionid=collections.id AND datasets.id='` + id + `';`
 			err = formdb.QueryRow(query).Scan(&userid, &filename, &filetype, &datasetname, &lat, &lon, &uploadtodataone, &firstnamepi, &lastnamepi, &categorytitle, &subcategorytitle, &groupname, &collectiontitle, &abstract, &purpose, &address1, &address2, &address3, &city, &state, &zip, &phonepi, &emailpi)
-			//fmt.Println(filetype)
 			if filetype == "*.csv" {
+				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
+				if uploadtodataone == "Yes" {
+					dataonearchive = "True"
+				} else if uploadtodataone == "No" {
+					dataonearchive = "False"
+				}
+				westbc = lon
+				eastbc = lon
+				northbc = lat
+				southbc = lat
+				uploaduser = IDtoName(userid)
+				extension := strings.TrimPrefix(filetype, "*.")
+
+				var address string
+				address = MakeAddr(address1, address)
+				address = MakeAddr(address2, address)
+				address = MakeAddr(address3, address)
+				query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+				rows, err := formdb.Query(query)
+				LogErr(err)
+				piname := firstnamepi + ` ` + lastnamepi
+				for rows.Next() {
+					var field, description, units, frequency, aggregation, nodata, dommin, dommax string
+					err = rows.Scan(&field, &description, &units, &frequency, &aggregation, &nodata, &dommin, &dommax)
+					attributemap := map[string]string{
+						"field":       field,
+						"description": description,
+						"units":       units,
+						"frequency":   frequency,
+						"aggregation": aggregation,
+						"nodata":      nodata,
+						"dommin":      dommin,
+						"dommax":      dommax,
+						"attrdefs":    piname,
+					}
+
+					attributemap = NormalizeAttributes(attributemap)
+
+					attributes = attributes + BuildAttributes(attributemap)
+				}
+				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
+				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				xmlbuf := new(bytes.Buffer)
+				xt := template.Must(template.New("xml").Parse(GSTOREXML))
+				err = xt.Execute(xmlbuf, params)
+				LogErr(err)
+				xmlstring := string(xmlbuf.Bytes())
+				xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
+				xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+
+				//get the prams from file.
+
 				if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
 					f, _ := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
 
@@ -592,7 +1208,7 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 					for i := range records {
 						// Element count.
 
-						//fmt.Printf("Elements: %v", len(records[i]))
+						fmt.Printf("Elements: %v", len(records[i]))
 						//fmt.Println()
 						// Elements.
 						if records[i][0] != firstlabel {
@@ -603,34 +1219,103 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 							LogErr(err)
 							observed := timeindex.Format("20060102T15:04:05")
 							_ = observed
-							//							fmt.Println(records[i][1])
+							//                             	                        fmt.Println(records[i$
 						}
 					}
-					//              fmt.Println(csvr[0])
-					//	for {
-					//		record, err := csvr.Read()
-					//              fmt.Println(record[0])
-					// Stop at EOF.
-					//		if err == io.EOF {
-					//			break
-					//		}
-					// Display record.
-					// ... Display record length.
-					// ... Display all individual elements of the slice.
-					//	fmt.Println(record)
-					//	fmt.Println(len(record))
-					//	for value := range record {
-					//		fmt.Printf("  %v\n", record[value])
-					//	}
-					//					}
-					//
-					//				} else {
-					//					fmt.Println("file not found!")
 				}
 
+				jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: "xmlstringstring", BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				jsonbuf := new(bytes.Buffer)
+				jt := template.Must(template.New("json").Parse(FILEJSON))
+				err = jt.Execute(jsonbuf, jsonparams)
+				LogErr(err)
+				w.Header().Set("Content-Type", "text/html")
+				jbufstring := string(jsonbuf.Bytes())
+				fmt.Println(jbufstring)
+				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring)}
+				t := template.New("insert")
+				t, err = t.Parse(InsertViewTPL)
+				LogErr(err)
+				err = t.Execute(w, jsonparam)
+
+				if strings.EqualFold(post, "True") {
+					req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept-Encoding", "gzip, deflate")
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						panic(err)
+					}
+					defer resp.Body.Close()
+				}
+
+				/*				fmt.Println("its a csv...")
+								if _, err := os.Stat("/uploads/" + IDtoName(userid) + "/" + filename); err == nil {
+									f, _ := os.Open("/uploads/" + IDtoName(userid) + "/" + filename)
+
+									csvr := csv.NewReader(bufio.NewReader(f))
+									records, err := csvr.ReadAll()
+									LogErr(err)
+									firstlabel := records[0][0]
+
+									alllabels := records[0]
+										//datecolumn := ""
+									var datefield, timefield int
+									for i := 0; i < len(alllabels); i += 1 {
+										lab := alllabels[i]
+										//fmt.Println(lab)
+										if strings.ToLower(lab) == "date" {
+											datefield = i
+										}
+										if strings.ToLower(lab) == "time" {
+											timefield = i
+										}
+									}
+									//fmt.Println(getcurrentdataformat(records, firstlabel, datefield))
+									for i := range records {
+										// Element count.
+
+										//fmt.Printf("Elements: %v", len(records[i]))
+										//fmt.Println()
+										// Elements.
+										if records[i][0] != firstlabel {
+
+											var stime string
+											stime = records[i][datefield] + " " + records[i][timefield]
+											timeindex, err := time.Parse("1/2/2006 15:04:05", stime)
+											LogErr(err)
+											observed := timeindex.Format("20060102T15:04:05")
+											_ = observed
+											//							fmt.Println(records[i][1])
+										}
+									}}
+													//              fmt.Println(csvr[0])
+													//	for {
+													//		record, err := csvr.Read()
+													//              fmt.Println(record[0])
+													// Stop at EOF.
+													//		if err == io.EOF {
+													//			break
+													//		}
+													// Display record.
+													// ... Display record length.
+													// ... Display all individual elements of the slice.
+													//	fmt.Println(record)
+													//	fmt.Println(len(record))
+													//	for value := range record {
+													//		fmt.Printf("  %v\n", record[value])
+													//	}
+													//					}
+													//
+													//				} else {
+													//					fmt.Println("file not found!")
+												}*/
+
 			} else {
+
 				//fmt.Println("Not a csv")
-//InsertViewTPL
+				//InsertViewTPL
 				//			LogErr(err)
 
 				basename = strings.TrimSuffix(filename, filepath.Ext(filename))
@@ -677,47 +1362,44 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 				title := groupname + ` ` + categorytitle + `, ` + collectiontitle + ` - ` + datasetname
 
 				params := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: rawxml, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
-                                xmlbuf := new(bytes.Buffer)
-                                xt := template.Must(template.New("xml").Parse(GSTOREXML))
-                                err = xt.Execute(xmlbuf, params)
-                                LogErr(err)
-                                xmlstring:=string(xmlbuf.Bytes())
-                                xmlstringstring:=strings.Replace(xmlstring,"\n","\\n",-1)
-                                xmlstringstring=strings.Replace(xmlstringstring,"\t","\\t",-1)
-                                jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				xmlbuf := new(bytes.Buffer)
+				xt := template.Must(template.New("xml").Parse(GSTOREXML))
+				err = xt.Execute(xmlbuf, params)
+				LogErr(err)
+				xmlstring := string(xmlbuf.Bytes())
+				xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
+				xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+				jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
 				jsonbuf := new(bytes.Buffer)
-//				xmlbuf := new(bytes.Buffer)
-				jt := template.Must(template.New("json").Parse(JSON))
-//                                xt := template.Must(template.New("xml").Parse(GSTOREXML))
+				//				xmlbuf := new(bytes.Buffer)
+				jt := template.Must(template.New("json").Parse(FILEJSON))
+				//                                xt := template.Must(template.New("xml").Parse(GSTOREXML))
 				err = jt.Execute(jsonbuf, jsonparams)
-                                LogErr(err)
-//                                err = xt.Execute(xmlbuf, params)
-//				LogErr(err)
+				LogErr(err)
+				//                                err = xt.Execute(xmlbuf, params)
+				//				LogErr(err)
 				w.Header().Set("Content-Type", "text/html")
 				//w.Write(jsonbuf.Bytes())
-                                jbufstring:=string(jsonbuf.Bytes())
-                                //xmlstring:=string(xmlbuf.Bytes())
-                                //xmloutput, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
+				jbufstring := string(jsonbuf.Bytes())
+				//xmlstring:=string(xmlbuf.Bytes())
+				//xmloutput, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
 				fmt.Println(jbufstring)
-                                jsonparam := &jsonstring{JSONSTR:jbufstring, XMLSTR:html.EscapeString(xmlstring)}
-                                t := template.New("insert")
-                        	t, err = t.Parse(InsertViewTPL)
-                        	LogErr(err)
-                		err = t.Execute(w,jsonparam)
-
-
+				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring)}
+				t := template.New("insert")
+				t, err = t.Parse(InsertViewTPL)
+				LogErr(err)
+				err = t.Execute(w, jsonparam)
 
 				//xmlbuf := new(bytes.Buffer)
-//				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
-//				err = xmlt.Execute(xmlbuf, params)
+				//				xmlt := template.Must(template.New("xml").Parse(GSTOREXML))
+				//				err = xmlt.Execute(xmlbuf, params)
 				//fmt.Println(xml.Marshal(xmlbuf.Bytes()))
-  //                              output, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
-    //                            fmt.Println(output)
-
+				//                              output, err := xml.MarshalIndent(xmlbuf.Bytes(), "", "  ")
+				//                            fmt.Println(output)
 
 				if strings.EqualFold(post, "True") {
 					//fmt.Println("Inserting")
-					req, err := http.NewRequest("POST", "http://129.24.63.66/gstore_v3/apps/energize/datasets", jsonbuf)
+					req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
 					req.Header.Set("Content-Type", "application/json")
 					req.Header.Set("Accept-Encoding", "gzip, deflate")
 					client := &http.Client{}
@@ -1123,20 +1805,57 @@ func BuildAttributes(attr map[string]string) string {
 
 	//for k, v := range attr{
 	xml := `<attr>
-        <attrlabl>` + attr["field"] + `</attrlabl>
-        <attrdef>` + attr["description"] + `</attrdef>
-        <attrdefs>` + attr["attrdefs"] + `</attrdefs>
-        <attrdomv>
-          <rdom>
-            <rdommin>` + attr["rdommin"] + `</rdommin>
-            <rdommax>` + attr["rdommax"] + `</rdommax>
-            <attrunit>` + attr["units"] + `</attrunit>
-          </rdom>
-        </attrdomv>
-      </attr>`
+<attrlabl>` + attr["field"] + `</attrlabl>
+<attrdef>` + attr["description"] + `</attrdef>
+<attrdefs>` + attr["attrdefs"] + `</attrdefs>
+<attrdomv>
+<rdom>
+<rdommin>` + attr["rdommin"] + `</rdommin>
+<rdommax>` + attr["rdommax"] + `</rdommax>
+<attrunit>` + attr["units"] + `</attrunit>
+</rdom>
+</attrdomv>
+</attr>`
 	//	}
 	return xml
 }
+
+/*
+func gettemporalformat(datetimelist []string) string){
+             for i := range datetimelist {
+
+                        matched, err := regexp.MatchString("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]", i)
+                        LogErr(err)
+                        if matched == true {
+                                format = "2006-1-2"
+                        }
+                        matched, err = regexp.MatchString("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]", i)
+                        LogErr(err)
+                        if matched == true {
+                                format = "2006/1/2"
+
+                        }
+                        matched, err = regexp.MatchString("[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]", i)
+                        LogErr(err)
+                        if matched == true {
+                                format = "1/2/2006"
+
+                        }
+                        matched, err = regexp.MatchString("[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]", i)
+                        LogErr(err)
+                        if matched == true {
+                                format = "1-2-2006"
+
+                        }
+                        matched, err = regexp.MatchString("[0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9] [0-9]:[0-9][0-9]:[0-9][0-9] [A-Za-z][A-Za-z]", i)
+                        LogErr(err)
+                        if matched == true {
+                                format = "1/2/2006"
+
+                        }
+
+
+}*/
 
 func getcurrentdataformat(records [][]string, firstlabel string, datefield int) string {
 	var format, sdate string
@@ -1190,3 +1909,25 @@ func getcurrentdataformat(records [][]string, firstlabel string, datefield int) 
 	return format
 }
 
+func FindOGRType(ogrlist []string, nodata string) int {
+	//default is string
+	returnval := 4
+	for i := range ogrlist {
+		element := ogrlist[i]
+		element = strings.Replace(element, "%", "", -1) //remove % to handle percentage as a number...not sure about this.
+		if len(element) != 0 && element != nodata {     //if it is a blank field or contains nodata then skip it.
+			if _, err := strconv.ParseFloat(element, 64); err == nil { //if it can be converted to a float
+				if _, err := strconv.Atoi(element); err == nil { //and it can be converted to an int
+					if returnval != 2 { //then it is an int, unless a previous element was found to be a float
+						returnval = 0
+					}
+				} else {
+					returnval = 2 //if you can only cange it to a float, then its a float
+				}
+			} else {
+				return 4 //if you can't convert it to a float then assume it is a string
+			}
+		}
+	}
+	return returnval
+}
