@@ -59,7 +59,12 @@ var routes = Routes{
                 "/insertview/{id}",
                 InsertView,
         },
-
+          	Route{
+                "TableInsertView",
+                "get",
+                "/tableinsertview/{id}",
+                TableInsertView,
+        },
 
 }
 
