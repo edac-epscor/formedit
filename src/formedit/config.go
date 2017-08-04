@@ -25,7 +25,7 @@ type Config struct {
 	Admins     string
 	Managers	string
 	Users		string
-
+	GSToREIP	string
 }
 
 // Reads info from config file
