@@ -543,15 +543,14 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type jsonstring struct {
-		JSONSTR string
-		XMLSTR  string
+		JSONSTR      string
+		XMLSTR       string
 		INSERTBUTTON string
 	}
 
-
-        type inserteddict struct {
-                ID string
-        }
+	type inserteddict struct {
+		ID string
+	}
 
 	type jsondict struct {
 		DATASETNAME      string
@@ -648,7 +647,6 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 				uploaduser = IDtoName(userid)
 				extension := strings.TrimPrefix(filetype, "*.")
 				mimetype := mime[extension]
-				//fmt.Println(mimetype)
 				var address string
 				address = MakeAddr(address1, address)
 				address = MakeAddr(address2, address)
@@ -837,7 +835,6 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 								title = strings.TrimSpace(sheet1.Row(0).Col(titlecount))
 								if title != "" {
 									//strings.Replace(xmlstring, "\n", "\\n", -1)
-									//fmt.Println(strings.ToLower(title))
 									if strings.Contains(strings.ToLower(title), "date") {
 										datefieldfound = true
 										datefield = title
@@ -875,14 +872,9 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 									}
 									//strings.Replace(xmlstring, "\n", "\\n", -1)
 									ogrtype := FindOGRType(ogrlist, nodata)
-									fmt.Println("##################################")
-									fmt.Println(ogrlist)
 									//name := strings.ToLower(replace_orig.Replace(title))
 									name := strings.ToLower(replace_orig.Replace(strings.Replace(title, "\n", "\\n", -1)))
-									fmt.Println(name)
 									tabledata[name] = ogrlist
-									fmt.Println(tabledata)
-									fmt.Println("##################################")
 									Fields2B.Fields = append(Fields2B.Fields, Fields{OrigName: title, Name: name, OgrWidth: ogrwidth, Description: fielddesc, Nodata: nodata, OgrType: ogrtype})
 									Fields2B2.Fields = append(Fields2B2.Fields, Fields{OrigName: title, Name: name, OgrWidth: ogrwidth})
 
@@ -906,32 +898,29 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 					fmt.Println("dates don't matter!!!")
 				}
 
-				jsonparams := &jsondict{DATASETNAME: strings.Replace(datasetname,"_"," ", -1), UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+				jsonparams := &jsondict{DATASETNAME: strings.Replace(datasetname, "_", " ", -1), UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, ORIGEPSG: origepsg, FEATURES: features, GEOMTYPE: geomtype, RECORDS: records, EPSG: epsg, WESTBC: westbc, EASTBC: eastbc, NORTHBC: northbc, SOUTHBC: southbc, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, GEOFORM: geoform, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
 				jsonbuf := new(bytes.Buffer)
 				jt := template.Must(template.New("json").Parse(TABLEJSON))
 				err = jt.Execute(jsonbuf, jsonparams)
 				LogErr(err)
 				w.Header().Set("Content-Type", "text/html")
 				jbufstring := string(jsonbuf.Bytes())
-				//fmt.Println(jbufstring)
 
 				insertbutton := `<div class="text-center"><div><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit/tableinsertview/` + id + `?post=true" role="button">Insert</a></div></div>`
-				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring), INSERTBUTTON:insertbutton}
+				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring), INSERTBUTTON: insertbutton}
 				t := template.New("insert")
 				t, err = t.Parse(InsertViewTPL)
 				LogErr(err)
-if strings.EqualFold(post, "True") {
-fmt.Println("inserting")
-}else{
-				err = t.Execute(w, jsonparam)
-}
-				//fmt.Println(reflect.TypeOf(jsonbuf))
-				//fmt.Println(tabledata)
+				if strings.EqualFold(post, "True") {
+					fmt.Println("inserting")
+				} else {
+					err = t.Execute(w, jsonparam)
+				}
 				attrmap := make(map[string]string)
 				if strings.EqualFold(post, "True") {
 					req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
 					req.Header.Set("Content-Type", "application/json")
-					req.Header.Set("Accept-Encoding", "gzip, deflate")
+					//req.Header.Set("Accept-Encoding", "gzip, deflate")
 					client := &http.Client{}
 					resp, err := client.Do(req)
 					if err != nil {
@@ -939,16 +928,12 @@ fmt.Println("inserting")
 					}
 					defer resp.Body.Close()
 
-					//fmt.Println("response Status:", resp.Status)
-					//fmt.Println("response Headers:", resp.Header)
 					body, _ := ioutil.ReadAll(resp.Body)
-					fmt.Println("response Body:", string(body))
 					datasetuuid := string(body)
 					ATTURL := "http://" + configf.GSToREIP + "/gstore_v3/apps/energize/datasets/" + datasetuuid + "/attributes"
 					Fields2B.Dataset = datasetuuid
 					attributejson, _ = json.Marshal(Fields2B)
-					fmt.Println(string(attributejson))
-					if resp.StatusCode == 200 {
+					if resp.StatusCode == 200 && IsValidUUID(string(body)) {
 						b := bytes.NewBuffer(attributejson)
 						req, err := http.NewRequest("POST", ATTURL, b)
 						req.Header.Set("Content-Type", "application/json")
@@ -959,23 +944,18 @@ fmt.Println("inserting")
 							panic(err)
 						}
 						defer resp.Body.Close()
-						fmt.Println("response Status:", resp.Status)
-						fmt.Println("response Headers:", resp.Header)
 						body, _ := ioutil.ReadAll(resp.Body)
-						fmt.Println("response Body:", string(body))
 
 						res := AttributesJSONDoc{}
 						json.Unmarshal([]byte(body), &res)
-						fmt.Println(res)
 						for _, value := range res.Attributes {
 							attrmap[value.Name] = value.UUID
 						}
 
 						records := RecordsJSONDoc{}
-						recordID:=0
+						recordID := 0
 						for rowcount := 1; rowcount < maxrows; rowcount++ {
 							recordID++
-							fmt.Println(rowcount)
 							atts := Atts{}
 							record := Records{}
 
@@ -984,7 +964,6 @@ fmt.Println("inserting")
 								keys = append(keys, k)
 							}
 							sort.Strings(keys)
-							fmt.Println(keys)
 							for _, key := range keys {
 								column := tabledata[key]
 								atts.Name = key
@@ -1011,7 +990,6 @@ fmt.Println("inserting")
 						}
 						records.Rids = append(records.Rids, "1")
 						recordsjson, _ := json.Marshal(records)
-						fmt.Println(string(recordsjson))
 
 						FEATURATTSURL := `http://` + configf.GSToREIP + `/gstore_v3/apps/epscor/datasets/` + datasetuuid + `/featureattributes`
 
@@ -1026,19 +1004,14 @@ fmt.Println("inserting")
 								panic(err)
 							}
 							defer resp.Body.Close()
-							fmt.Println("response Status:", resp.Status)
-							fmt.Println("response Headers:", resp.Header)
-							body, _ := ioutil.ReadAll(resp.Body)
-							fmt.Println("response Body:", string(body))
+							//body, _ := ioutil.ReadAll(resp.Body)
 							UpdateStatus(id, "accept", username)
 
-                                detparams := &inserteddict{ID: id}
-                                d := template.New("inserted")
-                                d, err = d.Parse(INSERTED)
-                                LogErr(err)
-                                err = d.Execute(w, detparams)
-
-
+							detparams := &inserteddict{ID: id}
+							d := template.New("inserted")
+							d, err = d.Parse(INSERTED)
+							LogErr(err)
+							err = d.Execute(w, detparams)
 
 						}
 
@@ -1196,7 +1169,6 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 					var datefield, timefield int
 					for i := 0; i < len(alllabels); i += 1 {
 						lab := alllabels[i]
-						//fmt.Println(lab)
 						if strings.ToLower(lab) == "date" {
 							datefield = i
 						}
@@ -1204,12 +1176,9 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 							timefield = i
 						}
 					}
-					//fmt.Println(getcurrentdataformat(records, firstlabel, datefield))
 					for i := range records {
 						// Element count.
 
-						fmt.Printf("Elements: %v", len(records[i]))
-						//fmt.Println()
 						// Elements.
 						if records[i][0] != firstlabel {
 
@@ -1219,7 +1188,6 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 							LogErr(err)
 							observed := timeindex.Format("20060102T15:04:05")
 							_ = observed
-							//                             	                        fmt.Println(records[i$
 						}
 					}
 				}
@@ -1231,7 +1199,6 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 				LogErr(err)
 				w.Header().Set("Content-Type", "text/html")
 				jbufstring := string(jsonbuf.Bytes())
-				fmt.Println(jbufstring)
 				jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring)}
 				t := template.New("insert")
 				t, err = t.Parse(InsertViewTPL)
@@ -1930,4 +1897,9 @@ func FindOGRType(ogrlist []string, nodata string) int {
 		}
 	}
 	return returnval
+}
+
+func IsValidUUID(uuid string) bool {
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
+	return r.MatchString(uuid)
 }
