@@ -580,7 +580,8 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 			xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
 			jbufstring, jsonbuf := GenerateTableJSON(id, xmlstringstring, title)
 			w.Header().Set("Content-Type", "text/html")
-			jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring)}
+			insertbutton := `<div class="text-center"><div><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit/tableinsertview/` + id + `?post=true" role="button">Insert</a></div></div>`
+			jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring), INSERTBUTTON: insertbutton}
 			t := template.New("insert")
 			t, err := t.Parse(InsertViewTPL)
 			LogErr(err)
@@ -635,7 +636,6 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 									rowdata := []string{}
 									for _, cell := range row.Cells {
 										text, _ := cell.String()
-										fmt.Printf("%s\n", text)
 										rowdata = append(rowdata, strings.Replace(strings.TrimSpace(text), "\n", "", -1))
 									}
 									tabledata = append(tabledata, rowdata)
@@ -1209,18 +1209,19 @@ func NormalizeAttributes(attr map[string]string) map[string]string {
 }
 
 func BuildAttributes(attr map[string]string) string {
-	xml := `<attr>
-<attrlabl>` + attr["field"] + `</attrlabl>
-<attrdef>` + attr["description"] + `</attrdef>
-<attrdefs>` + attr["attrdefs"] + `</attrdefs>
-<attrdomv>
-<rdom>
-<rdommin>` + attr["rdommin"] + `</rdommin>
-<rdommax>` + attr["rdommax"] + `</rdommax>
-<attrunit>` + attr["units"] + `</attrunit>
-</rdom>
-</attrdomv>
-</attr>`
+	xml := `
+			<attr>
+				<attrlabl>` + attr["field"] + `</attrlabl>
+				<attrdef>` + attr["description"] + `</attrdef>
+				<attrdefs>` + attr["attrdefs"] + `</attrdefs>
+				<attrdomv>
+					<rdom>
+						<rdommin>` + attr["rdommin"] + `</rdommin>
+						<rdommax>` + attr["rdommax"] + `</rdommax>
+						<attrunit>` + attr["units"] + `</attrunit>
+					</rdom>
+				</attrdomv>
+			</attr>`
 	//	}
 	return xml
 }
@@ -1396,9 +1397,9 @@ func GenerateTableXML(id string) (string, []string) {
 	err = xt.Execute(xmlbuf, params)
 	LogErr(err)
 	xmlstring := string(xmlbuf.Bytes())
-	xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
-	xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
-	return xmlstringstring, []string{title, filetype, userid, filename, nodata}
+//	xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
+//	xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+	return xmlstring, []string{title, filetype, userid, filename, nodata}
 
 }
 
@@ -1433,6 +1434,7 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 		GEOFORM          string
 		ATTRIBUTES       string
 		EXTENSION        string
+		XLSX	string
 	}
 
 	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, userid, filename, basename, isembargoed, releasedate, lat, lon, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi, attributes string
@@ -1443,7 +1445,7 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 		"csv":  "text/csv",
 	}
 
-	var address string
+	var address,xlsxvar string
 	//query for embargo to sort out release date
 	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
 	err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
@@ -1470,12 +1472,18 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 	uploaduser = IDtoName(userid)
 	extension := strings.TrimPrefix(filetype, "*.")
 	mimetype := mime[extension]
+
+	if extension=="xlsx"{
+	xlsxvar=`"xlsx",`
+}else{
+xlsxvar=``
+}
 	address = MakeAddr(address1, address)
 	address = MakeAddr(address2, address)
 	address = MakeAddr(address3, address)
 	query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
 
-	jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes}
+	jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes, XLSX:xlsxvar}
 	jsonbuf := new(bytes.Buffer)
 	jt := template.Must(template.New("json").Parse(TABLEJSON))
 	err = jt.Execute(jsonbuf, jsonparams)
