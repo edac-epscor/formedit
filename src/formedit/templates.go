@@ -920,7 +920,7 @@ const TABLEJSON string = `{
         ],
 	"project": "NM EPSCoR R4",
         "services": [],
-        "formats": ["json","xls","csv"],
+        "formats": [{{.XLSX}}"json","xls","csv"],
         "metadata": {
             "xml": "{{.RAWXML}}",
             "upgrade": "true",
