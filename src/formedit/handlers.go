@@ -1667,8 +1667,10 @@ func BuildFeaturesPost(tabledata [][]string, ColumnMap map[string][]string, temp
 			atts.Val = column[rowcount]
 			atts.U = attrmap[key]
 			record.Atts = append(record.Atts, atts)
-			if key == strings.ToLower(replace_orig.Replace(temporalfield)) {
-				timeindex, err := time.Parse("1/2/2006 15:04:05 PM", column[rowcount])
+                        temporalfieldlower:=strings.ToLower(replace_orig.Replace(temporalfield))
+			if key == temporalfieldlower {
+				CurrentFormat:=getcurrentdateformat(ColumnMap, temporalfieldlower)
+				timeindex, err := time.Parse(CurrentFormat, column[rowcount])
 				LogErr(err)
 				observed := timeindex.Format("20060102T15:04:05")
 				record.Observed = observed
@@ -1712,3 +1714,79 @@ func PostFeatures(recordsjson []uint8, id string, username string, datasetuuid s
 	return resp.StatusCode
 
 }
+
+func getcurrentdateformat(ColumnMap map[string][]string, temporalfield string) string {
+	var format string
+	dates := ColumnMap[temporalfield]
+
+
+	for _, sdate := range dates {
+
+
+		matched, err := regexp.MatchString("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "2006-1-2"
+
+		}
+		matched, err = regexp.MatchString("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "2006/1/2"
+
+		}
+		matched, err = regexp.MatchString("[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "1/2/2006"
+
+		}
+		matched, err = regexp.MatchString("[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "1-2-2006"
+
+		}
+
+		matched, err = regexp.MatchString("[0-9]{1,2}[:.,-]?/[0-9]{1,2}[:.,-]?/[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "1/2/2006 15:04:05 PM"
+			matched, err = regexp.MatchString("0[0-9]/[0-9]{1,2}[:.,-]?/[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+			if matched == true {
+				format = "01/02/2006 15:04:05 PM"
+				return format
+			}
+
+			matched, err = regexp.MatchString("[0-9]{1,2}[:.,-]?/0[0-9]/[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+			if matched == true {
+				format = "01/02/2006 15:04:05 PM"
+				return format
+			}
+
+		}
+
+		matched, err = regexp.MatchString("[0-9]{1,2}[:.,-]?-[0-9]{1,2}[:.,-]?-[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+		LogErr(err)
+		if matched == true {
+			format = "1-2-2006 15:04:05 PM"
+			matched, err = regexp.MatchString("0[0-9]-[0-9]{1,2}[:.,-]?-[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+                        if matched == true {
+                                format = "01-02-2006 15:04:05 PM"
+                                return format
+                        }
+
+			matched, err = regexp.MatchString("[0-9]{1,2}[:.,-]?-0[0-9]-[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
+                        if matched == true {
+                                format = "01-02-2006 15:04:05 PM"
+                                return format
+                        }
+
+		}
+
+		LogErr(err)
+	}
+
+	return format
+}
+
