@@ -1345,7 +1345,7 @@ const MAIL string =`<!doctype html>
 </html>
 `
 
-const INSERTED string = `<html>
+const Message string = `<html>
 <head>
   <title>Form Edit</title>
   <meta charset="utf-8">
@@ -1391,7 +1391,7 @@ body {
 
 <div class="container">
  <div class="alert alert-info" style="text-align: center">
-  <strong> Dataset {{.ID}} inserted.</strong>
+  <strong> {{.MESSAGE}}</strong>
  </div>
 
 

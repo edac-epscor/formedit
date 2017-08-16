@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"github.com/extrame/xls"
 	"github.com/gorilla/mux"
 	"html"
 	"io/ioutil"
@@ -19,9 +21,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
-	"encoding/json"
-	"github.com/extrame/xls"
-	//	"reflect"
+	//		"reflect"
 	"github.com/tealeg/xlsx"
 	"sort"
 )
@@ -528,8 +528,8 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 		INSERTBUTTON string
 	}
 
-	type inserteddict struct {
-		ID string
+	type messagedict struct {
+		MESSAGE string
 	}
 
 	type jsondict struct {
@@ -647,20 +647,51 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 					}
 
 				}
-				datasetuuid := AddDataset(jsonbuf)
+				datasetuuid, rstatus := AddDataset(jsonbuf)
 				if IsValidUUID(datasetuuid) {
 					attributesJSON, temporalfield, ColumnMap := BuildAttributePost(tabledata, id, fileinfo[4], datasetuuid)
-					attrmap := PostAttributes(attributesJSON, datasetuuid)
-					recordsJSON := BuildFeaturesPost(tabledata, ColumnMap, temporalfield, attrmap)
-					response := PostFeatures(recordsJSON, id, username, datasetuuid)
-					if response == 200 {
-						detparams := &inserteddict{ID: id}
+					attrmap, PAbody, PAstatus := PostAttributes(attributesJSON, datasetuuid)
+					if PAstatus == 200 {
+						recordsJSON := BuildFeaturesPost(tabledata, ColumnMap, temporalfield, attrmap)
+						response, Fbody := PostFeatures(recordsJSON, id, username, datasetuuid)
+						if response == 200 {
+							insertmessage := `Dataset ` + id + `has been inserted.<br><a href=http://data.nmepscor.org/details.html?uuid=` + datasetuuid + `&type=tabular>Click here to view the dataset.</a>`
+							detparams := &messagedict{MESSAGE: insertmessage}
+							d := template.New("inserted")
+							d, err = d.Parse(Message)
+							LogErr(err)
+							err = d.Execute(w, detparams)
+							LogErr(err)
+						} else {
+							errormessage := `<p><span style="color: #ff0000;">Posting the features returned status of ` + strconv.Itoa(response) + `.</span></p><p><span style="color: #ff0000;"><strong>` + Fbody + `</strong></span></p>`
+							detparams := &messagedict{MESSAGE: errormessage}
+							d := template.New("inserted")
+							d, err = d.Parse(Message)
+							LogErr(err)
+							err = d.Execute(w, detparams)
+							LogErr(err)
+
+						}
+					} else {
+
+						errormessage := `<p><span style="color: #ff0000;">Posting the features returned status of ` + strconv.Itoa(PAstatus) + `.</span></p><p><span style="color: #ff0000;"><strong>` + PAbody + `</strong></span></p>`
+						detparams := &messagedict{MESSAGE: errormessage}
 						d := template.New("inserted")
-						d, err = d.Parse(INSERTED)
+						d, err = d.Parse(Message)
 						LogErr(err)
 						err = d.Execute(w, detparams)
 						LogErr(err)
+
 					}
+				} else {
+					errormessage := `<p><span style="color: #ff0000;">Inserting the dataset returned status of ` + strconv.Itoa(rstatus) + `.</span></p><p><span style="color: #ff0000;"><strong>` + datasetuuid + `</strong></span></p>`
+					detparams := &messagedict{MESSAGE: errormessage}
+					d := template.New("inserted")
+					d, err = d.Parse(Message)
+					LogErr(err)
+					err = d.Execute(w, detparams)
+					LogErr(err)
+
 				}
 			} else {
 				err = t.Execute(w, jsonparam)
@@ -677,8 +708,8 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 		INSERTBUTTON string
 	}
 
-	type inserteddict struct {
-		ID string
+	type messagedict struct {
+		MESSAGE string
 	}
 
 	type jsondict struct {
@@ -837,11 +868,12 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 
 					UpdateStatus(id, "accept", username)
 
-					detparams := &inserteddict{ID: id}
+					detparams := &messagedict{MESSAGE: "Dataset " + id + " has been inserted."}
 					d := template.New("inserted")
-					d, err = d.Parse(INSERTED)
+					d, err = d.Parse(Message)
 					LogErr(err)
 					err = d.Execute(w, detparams)
+					LogErr(err)
 
 				}
 
@@ -1397,8 +1429,8 @@ func GenerateTableXML(id string) (string, []string) {
 	err = xt.Execute(xmlbuf, params)
 	LogErr(err)
 	xmlstring := string(xmlbuf.Bytes())
-//	xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
-//	xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
+	//	xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
+	//	xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
 	return xmlstring, []string{title, filetype, userid, filename, nodata}
 
 }
@@ -1434,7 +1466,7 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 		GEOFORM          string
 		ATTRIBUTES       string
 		EXTENSION        string
-		XLSX	string
+		XLSX             string
 	}
 
 	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, userid, filename, basename, isembargoed, releasedate, lat, lon, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi, attributes string
@@ -1445,7 +1477,7 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 		"csv":  "text/csv",
 	}
 
-	var address,xlsxvar string
+	var address, xlsxvar string
 	//query for embargo to sort out release date
 	query := `SELECT userid, filename, embargoreleasedate FROM datasets where id='` + id + `';`
 	err := formdb.QueryRow(query).Scan(&userid, &filename, &releasedatenull)
@@ -1473,17 +1505,17 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 	extension := strings.TrimPrefix(filetype, "*.")
 	mimetype := mime[extension]
 
-	if extension=="xlsx"{
-	xlsxvar=`"xlsx",`
-}else{
-xlsxvar=``
-}
+	if extension == "xlsx" {
+		xlsxvar = `"xlsx",`
+	} else {
+		xlsxvar = ``
+	}
 	address = MakeAddr(address1, address)
 	address = MakeAddr(address2, address)
 	address = MakeAddr(address3, address)
 	query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
 
-	jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes, XLSX:xlsxvar}
+	jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes, XLSX: xlsxvar}
 	jsonbuf := new(bytes.Buffer)
 	jt := template.Must(template.New("json").Parse(TABLEJSON))
 	err = jt.Execute(jsonbuf, jsonparams)
@@ -1493,7 +1525,7 @@ xlsxvar=``
 
 }
 
-func AddDataset(jsonbuf *bytes.Buffer) string {
+func AddDataset(jsonbuf *bytes.Buffer) (string, int) {
 
 	req, err := http.NewRequest("POST", "http://"+configf.GSToREIP+"/gstore_v3/apps/energize/datasets", jsonbuf)
 	req.Header.Set("Content-Type", "application/json")
@@ -1505,7 +1537,8 @@ func AddDataset(jsonbuf *bytes.Buffer) string {
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	datasetuuid := string(body)
-	return datasetuuid
+	return datasetuuid, resp.StatusCode
+
 }
 
 func BuildAttributePost(tabledata [][]string, id string, nodata string, datasetuuid string) ([]uint8, string, map[string][]string) {
@@ -1597,7 +1630,7 @@ func BuildAttributePost(tabledata [][]string, id string, nodata string, datasetu
 	return attributesJSON, temporalfield, ColumnMap
 }
 
-func PostAttributes(attributesJSON []uint8, datasetuuid string) map[string]string {
+func PostAttributes(attributesJSON []uint8, datasetuuid string) (map[string]string, string, int) {
 	type Attributes struct {
 		Name string `json:"name"`
 		UUID string `json:"uuid"`
@@ -1625,7 +1658,7 @@ func PostAttributes(attributesJSON []uint8, datasetuuid string) map[string]strin
 	for _, value := range res.Attributes {
 		attrmap[value.Name] = value.UUID
 	}
-	return attrmap
+	return attrmap, string(body), resp.StatusCode
 
 }
 
@@ -1667,9 +1700,9 @@ func BuildFeaturesPost(tabledata [][]string, ColumnMap map[string][]string, temp
 			atts.Val = column[rowcount]
 			atts.U = attrmap[key]
 			record.Atts = append(record.Atts, atts)
-                        temporalfieldlower:=strings.ToLower(replace_orig.Replace(temporalfield))
+			temporalfieldlower := strings.ToLower(replace_orig.Replace(temporalfield))
 			if key == temporalfieldlower {
-				CurrentFormat:=getcurrentdateformat(ColumnMap, temporalfieldlower)
+				CurrentFormat := getcurrentdateformat(ColumnMap, temporalfieldlower)
 				timeindex, err := time.Parse(CurrentFormat, column[rowcount])
 				LogErr(err)
 				observed := timeindex.Format("20060102T15:04:05")
@@ -1699,7 +1732,7 @@ func ReplaceOrig() *strings.Replacer {
 	return replace_orig
 }
 
-func PostFeatures(recordsjson []uint8, id string, username string, datasetuuid string) int {
+func PostFeatures(recordsjson []uint8, id string, username string, datasetuuid string) (int, string) {
 	FEATURATTSURL := `http://` + configf.GSToREIP + `/gstore_v3/apps/epscor/datasets/` + datasetuuid + `/featureattributes`
 	rjson := bytes.NewBuffer(recordsjson)
 	req, err := http.NewRequest("POST", FEATURATTSURL, rjson)
@@ -1711,7 +1744,10 @@ func PostFeatures(recordsjson []uint8, id string, username string, datasetuuid s
 	}
 	defer resp.Body.Close()
 	UpdateStatus(id, "accept", username)
-	return resp.StatusCode
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	return resp.StatusCode, string(body)
 
 }
 
@@ -1719,9 +1755,7 @@ func getcurrentdateformat(ColumnMap map[string][]string, temporalfield string) s
 	var format string
 	dates := ColumnMap[temporalfield]
 
-
 	for _, sdate := range dates {
-
 
 		matched, err := regexp.MatchString("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]", sdate)
 		LogErr(err)
@@ -1771,16 +1805,16 @@ func getcurrentdateformat(ColumnMap map[string][]string, temporalfield string) s
 		if matched == true {
 			format = "1-2-2006 15:04:05 PM"
 			matched, err = regexp.MatchString("0[0-9]-[0-9]{1,2}[:.,-]?-[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
-                        if matched == true {
-                                format = "01-02-2006 15:04:05 PM"
-                                return format
-                        }
+			if matched == true {
+				format = "01-02-2006 15:04:05 PM"
+				return format
+			}
 
 			matched, err = regexp.MatchString("[0-9]{1,2}[:.,-]?-0[0-9]-[0-9][0-9][0-9][0-9] [0-9]{1,2}[:.,-]?:[0-9][0-9]:[0-9][0-9] [A-Z]M", sdate)
-                        if matched == true {
-                                format = "01-02-2006 15:04:05 PM"
-                                return format
-                        }
+			if matched == true {
+				format = "01-02-2006 15:04:05 PM"
+				return format
+			}
 
 		}
 
@@ -1789,4 +1823,3 @@ func getcurrentdateformat(ColumnMap map[string][]string, temporalfield string) s
 
 	return format
 }
-
