@@ -21,7 +21,6 @@ import (
 	"strings"
 	"text/template"
 	"time"
-	//		"reflect"
 	"github.com/tealeg/xlsx"
 	"sort"
 )
@@ -58,7 +57,6 @@ func SimpleForm(w http.ResponseWriter, r *http.Request) {
 		if auth >= 1 && auth+1 >= statusi && statusi != 1 {
 			//sort out what the viewer can see based on auth number returned by isAuthorized
 			authmap := AuthMap(auth)
-			//	authmap := SetCurrent(authmap, status)
 			if status == "" {
 
 				params := &secretdict{BODY: "", STYLE: "", STATUS1: authmap["status1"], DISABLED1: authmap["disabled1"], STATUS2: authmap["status2"], DISABLED2: authmap["disabled2"], STATUS3: authmap["status3"], DISABLED3: authmap["disabled3"], STATUS4: authmap["status4"], DISABLED4: authmap["disabled4"], STATUS5: authmap["status5"], DISABLED5: authmap["disabled5"], LOGO: Logo}
@@ -578,7 +576,7 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 			filepath := "/uploads/" + IDtoName(fileinfo[2]) + "/" + fileinfo[3]
 			xmlstringstring := strings.Replace(xmlstring, "\n", "\\n", -1)
 			xmlstringstring = strings.Replace(xmlstringstring, "\t", "\\t", -1)
-			jbufstring, jsonbuf := GenerateTableJSON(id, xmlstringstring, title)
+			jbufstring, jsonbuf := GenerateTableJSON(id, xmlstringstring, title, isapost)
 			w.Header().Set("Content-Type", "text/html")
 			insertbutton := `<div class="text-center"><div><a class="btn btn-insert glyphicon glyphicon-import " href="/formedit/tableinsertview/` + id + `?post=true" role="button">Insert</a></div></div>`
 			jsonparam := &jsonstring{JSONSTR: jbufstring, XMLSTR: html.EscapeString(xmlstring), INSERTBUTTON: insertbutton}
@@ -604,29 +602,40 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				} else if filetype == "*.xls" {
+					fmt.Println("It is an xls file")
 					if _, err := os.Stat(filepath); err == nil {
+						fmt.Println("Can stat file")
 						if xlFile, err := xls.Open(filepath, "utf-8"); err == nil {
+							fmt.Println("can open file")
 							if sheet1 := xlFile.GetSheet(0); sheet1 != nil {
+								fmt.Println("Found sheet 0")
 								title := "xxxx"
 								columncount := 0
 								for title != "" {
 									title = strings.TrimSpace(sheet1.Row(0).Col(columncount))
+									fmt.Println(title)
 									if title != "" {
 										columncount++
 									}
-								}
+									fmt.Println(columncount)
+}
 								//for every row
 								for rowcount := 0; rowcount <= (int(sheet1.MaxRow)); rowcount++ {
 									rowdata := []string{}
 									//for each column in this row
 									for col := 0; col < columncount; col++ {
 										rowdata = append(rowdata, strings.Replace(strings.TrimSpace(sheet1.Row(rowcount).Col(col)), "\n", "", -1))
+										fmt.Println(sheet1.Row(rowcount).Col(col))
 									}
+                                                                        fmt.Println(rowdata)
 									tabledata = append(tabledata, rowdata)
 								}
 							}
+
 						}
+						LogErr(err)
 					}
+					LogErr(err)
 				} else if filetype == "*.xlsx" {
 					if _, err := os.Stat(filepath); err == nil {
 						if xlFile, err := xlsx.OpenFile(filepath); err == nil {
@@ -674,7 +683,7 @@ func TableInsertView(w http.ResponseWriter, r *http.Request) {
 						}
 					} else {
 
-						errormessage := `<p><span style="color: #ff0000;">Posting the features returned status of ` + strconv.Itoa(PAstatus) + `.</span></p><p><span style="color: #ff0000;"><strong>` + PAbody + `</strong></span></p>`
+						errormessage := `<p><span style="color: #ff0000;">Posting the attributes returned status of ` + strconv.Itoa(PAstatus) + `.</span></p><p><span style="color: #ff0000;"><strong>` + PAbody + `</strong></span></p>`
 						detparams := &messagedict{MESSAGE: errormessage}
 						d := template.New("inserted")
 						d, err = d.Parse(Message)
@@ -754,13 +763,11 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 	var datasetname, uploaduser, firstnamepi, filetype, lastnamepi, categorytitle, subcategorytitle, rawxml, userid, filename, basename, isembargoed, releasedate, lat, lon, westbc, eastbc, northbc, southbc, dataonearchive, uploadtodataone, groupname, collectiontitle, abstract, purpose, city, state, zip, phonepi, emailpi, attributes string
 	var releasedatenull, address1, address2, address3 sql.NullString
 
-	//Bill has these hardcoded, so I am to for now, but this should be dynamic no?
-	//Why is records randomly set to 201?
 	epsg := "4326"
 	origepsg := "26913"
 	features := "1"
 	geomtype := "POLYGON"
-	records := "201" //<-this is the number of records?
+	records := "1"
 	geoform := "spreadsheet"
 
 	id := mux.Vars(r)["id"]
@@ -859,12 +866,15 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 				client := &http.Client{}
 				resp, err := client.Do(req)
 				if err != nil {
+                                        LogErr(err)
+
 					panic(err)
 				}
 				body, _ := ioutil.ReadAll(resp.Body)
+				fmt.Println(string(body))
 				defer resp.Body.Close()
 
-				if resp.StatusCode == 200 && IsValidUUID(string(body)) {
+				if resp.StatusCode == 200 {
 
 					UpdateStatus(id, "accept", username)
 
@@ -874,6 +884,15 @@ func InsertView(w http.ResponseWriter, r *http.Request) {
 					LogErr(err)
 					err = d.Execute(w, detparams)
 					LogErr(err)
+
+				}else{
+				        detparams := &messagedict{MESSAGE: "Dataset " + id + " has NOT been inserted."}
+                                        d := template.New("inserted")
+                                        d, err = d.Parse(Message)
+                                        LogErr(err)
+                                        err = d.Execute(w, detparams)
+                                       	LogErr(err)
+					fmt.Println(resp.Body)
 
 				}
 
@@ -1435,7 +1454,7 @@ func GenerateTableXML(id string) (string, []string) {
 
 }
 
-func GenerateTableJSON(id string, xmlstringstring string, title string) (string, *bytes.Buffer) {
+func GenerateTableJSON(id string, xmlstringstring string, title string, isapost bool) (string, *bytes.Buffer) {
 
 	type jsondict struct {
 		DATASETNAME      string
@@ -1514,6 +1533,10 @@ func GenerateTableJSON(id string, xmlstringstring string, title string) (string,
 	address = MakeAddr(address2, address)
 	address = MakeAddr(address3, address)
 	query = `SELECT field, description, units, frequency, aggregation, nodata, dommin, dommax FROM fieldinfo WHERE datasetid='` + id + `';`
+	if !isapost{
+	xmlstringstring="XML BLOCK. See below."
+	}
+
 
 	jsonparams := &jsondict{DATASETNAME: datasetname, UPLOADUSER: uploaduser, FILENAME: filename, FIRSTNAMEPI: firstnamepi, LASTNAMEPI: lastnamepi, CATEGORYTITLE: categorytitle, SUBCATEGORYTITLE: subcategorytitle, RAWXML: xmlstringstring, BASENAME: basename, ISEMBARGOED: isembargoed, RELEASEDATE: releasedate, EXTENSION: extension, MIMETYPE: mimetype, DATAONEARCHIVE: dataonearchive, GROUPNAME: groupname, TITLE: title, ABSTRACT: abstract, PURPOSE: purpose, ADDRESS: address, CITY: city, STATE: state, ZIP: zip, PHONEPI: phonepi, EMAILPI: emailpi, COLLECTIONTITLE: collectiontitle, ATTRIBUTES: attributes, XLSX: xlsxvar}
 	jsonbuf := new(bytes.Buffer)
@@ -1610,7 +1633,6 @@ func BuildAttributePost(tabledata [][]string, id string, nodata string, datasetu
 		ColumnMap[name] = columndata
 
 		Fields2B.Fields = append(Fields2B.Fields, Fields{OrigName: title, Name: name, OgrWidth: ogrwidth, Description: fielddesc, Nodata: nodata, OgrType: ogrtype})
-
 		if datefieldfound && timefieldfound {
 			fmt.Println("Use " + datefield + " for date and " + timefield + "for time")
 		} else if datefieldfound {
@@ -1620,17 +1642,19 @@ func BuildAttributePost(tabledata [][]string, id string, nodata string, datasetu
 			fmt.Println("Use " + timefield)
 			temporalfield = timefield
 		} else {
-			//fmt.Println("dates don't matter!!!")
+			fmt.Println("dates don't matter!!!")
 		}
 
 	}
 
 	Fields2B.Dataset = datasetuuid
 	attributesJSON, _ := json.Marshal(Fields2B)
+	fmt.Println(string(attributesJSON))
 	return attributesJSON, temporalfield, ColumnMap
 }
 
 func PostAttributes(attributesJSON []uint8, datasetuuid string) (map[string]string, string, int) {
+
 	type Attributes struct {
 		Name string `json:"name"`
 		UUID string `json:"uuid"`
@@ -1640,6 +1664,8 @@ func PostAttributes(attributesJSON []uint8, datasetuuid string) (map[string]stri
 		Attributes []Attributes `json:"attributes"`
 	}
 
+	fmt.Println(attributesJSON)
+
 	ATTURL := "http://" + configf.GSToREIP + "/gstore_v3/apps/energize/datasets/" + datasetuuid + "/attributes"
 	attrmap := make(map[string]string)
 	jsonpost := bytes.NewBuffer(attributesJSON)
@@ -1648,7 +1674,7 @@ func PostAttributes(attributesJSON []uint8, datasetuuid string) (map[string]stri
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -1739,9 +1765,7 @@ func PostFeatures(recordsjson []uint8, id string, username string, datasetuuid s
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
+	LogErr(err)
 	defer resp.Body.Close()
 	UpdateStatus(id, "accept", username)
 

@@ -64,14 +64,46 @@ pre {
 .json-string {
    color: green;
    }
+
+
+
+.jumbotron {
+    padding: 0.0em 0.0em;
+    h1 {
+        font-size: 2em;
+    }
+    p {
+        font-size: 1.2em;
+        .btn {
+            padding: 0.0em;
+        }
+    }
+}
+
+
 </style>
 
 </head>
 <body>
+
+<div class="container">
+  <div class="jumbotron">
+    <h1>JSON</h1>
+
+
 <pre><code id=systemmetadata></code></pre>
+<br>
+</div>
+</div>
+<div class="container">
+  <div class="jumbotron">
+    <h1>XML</h1>
+
 
 <pre><cod>{{.XMLSTR}}</code></pre>
-
+<br>
+</div>
+</div>
 </body>
 <script>
 if (!library)
